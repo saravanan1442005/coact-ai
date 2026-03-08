@@ -29,26 +29,23 @@ const Login: React.FC = () => {
             if (error) throw error;
 
             if (data.session) {
-                // Sync user with backend
-                const syncRes = await fetch(getApiUrl('/api/auth/sync'), {
+                const user = data.user;
+                localStorage.setItem('user', JSON.stringify({
+                    id: user?.id,
+                    email: user?.email,
+                }));
+
+                // Sync user with backend (non-blocking — don't fail login if backend is slow/down)
+                fetch(getApiUrl('/api/auth/sync'), {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${data.session.access_token}`,
                         'Content-Type': 'application/json'
                     }
-                });
+                }).catch(err => console.warn('Backend sync skipped:', err));
 
-                if (syncRes.ok) {
-                    const user = data.user;
-                    localStorage.setItem('user', JSON.stringify({
-                        id: user?.id,
-                        email: user?.email,
-                    }));
-                    toast.success(`Welcome back!`);
-                    navigate('/practice');
-                } else {
-                    throw new Error('Backend sync failed');
-                }
+                toast.success(`Welcome back!`);
+                navigate('/practice');
             }
         } catch (err: any) {
             console.error(err);
@@ -137,14 +134,7 @@ const Login: React.FC = () => {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center">
-                    <p className="text-muted-foreground text-sm">
-                        Don't have an account?{' '}
-                        <Link to="/signup" className="text-primary hover:text-primary/80 font-medium hover:underline transition-all">
-                            Sign up
-                        </Link>
-                    </p>
-                </div>
+
             </motion.div>
         </div>
     );
