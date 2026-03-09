@@ -6,7 +6,8 @@ from datetime import datetime
 from supabase import create_client, Client
 
 url = os.getenv("SUPABASE_URL")
-key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+# Use the Service Role Key for backend operations to correctly bypass RLS when writing/reading user data
+key = os.getenv("SUPABASE_SERVICE_KEY")
 supabase = create_client(url, key) if url and key else None
 
 # ---------------------------------------------------------
@@ -94,7 +95,6 @@ def save_session_to_db(session_data):
     if not session_id or not user_id:
         # Expected for guest sessions; do not print an error/warning
         return False
-        
     try:
         # Avoid json serialization issues for Postgres JSONB framework column
         framework_val = session_data.get("framework")
@@ -150,6 +150,8 @@ def save_session_to_db(session_data):
         
         # Upsert the session record in practice_history
         # The schema uses session_id as the primary key
+        if not supabase: return False
+        
         res = supabase.table("practice_history").upsert(data_to_insert).execute()
         print(f"[SUCCESS] Saved session {session_id} to database.")
         return True

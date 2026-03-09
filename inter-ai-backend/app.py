@@ -29,8 +29,8 @@ url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")  # Anon key for auth operations
 service_key: str = os.environ.get("SUPABASE_SERVICE_KEY", key)  # Service key for admin ops (bypasses RLS)
 
-supabase: Client = create_client(url, key)  # For auth verification
-supabase_admin: Client = create_client(url, service_key) if service_key else supabase  # For database writes
+supabase: Client = create_client(url, key)  # For all operations
+supabase_admin: Client = supabase  # Set them equal to avoid double-init of threading timers
 
 # ---------------------------------------------------------
 # Custom Modules & Setup
@@ -128,14 +128,18 @@ def get_authenticated_user():
     """Get the authenticated user from the Authorization header."""
     auth_header = request.headers.get("Authorization")
     if not auth_header:
+        print("[AUTH WARNING] No Authorization header provided in request", flush=True)
         return None
     
     try:
         token = auth_header.replace("Bearer ", "")
         res = supabase.auth.get_user(token)
+        if not res or not res.user:
+            print("[AUTH WARNING] Valid token checked, but no user returned.", flush=True)
+            return None
         return res.user
     except Exception as e:
-        print(f"Auth error: {e}")
+        print(f"[AUTH ERROR] Failed to verify user token: {e}", flush=True)
         return None
 
 def verify_session_ownership(session_id: str, user_id: str = None) -> bool:

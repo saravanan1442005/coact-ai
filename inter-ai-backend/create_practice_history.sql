@@ -117,7 +117,6 @@ CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.
 CREATE POLICY "Service role full access profiles" ON profiles FOR ALL USING (auth.role() = 'service_role');
 
 -- Practice History
-ALTER TABLE practice_history ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own sessions" ON practice_history FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own sessions" ON practice_history FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own sessions" ON practice_history FOR UPDATE USING (auth.uid() = user_id);
