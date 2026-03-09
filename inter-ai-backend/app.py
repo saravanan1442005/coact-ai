@@ -38,7 +38,7 @@ supabase_admin: Client = create_client(url, service_key) if service_key else sup
 from cli_report import generate_report, llm_reply, analyze_full_report_data, detect_scenario_type, build_summary_prompt
 
 # Database Models
-USE_DATABASE = False # Database persistence removed per user request
+USE_DATABASE = True # Re-enabled database persistence
 
 # Create Flask app
 app = Flask(__name__, static_folder='static', static_url_path='/static')
@@ -939,10 +939,10 @@ def get_history():
         if not user:
             return jsonify({"error": "Invalid token"}), 401
             
-        # Fetch only completed sessions from Database
+        # Fetch all sessions from Database (both completed and in-progress)
         user_id_str = str(user.id)
-        print(f"[HISTORY] Fetching completed sessions for user {user_id_str}")
-        db_result = get_user_sessions_from_db(user_id_str, completed_only=True)
+        print(f"[HISTORY] Fetching all sessions for user {user_id_str}")
+        db_result = get_user_sessions_from_db(user_id_str, completed_only=False)
         db_sessions = db_result.get("sessions", []) if isinstance(db_result, dict) else db_result
         
         user_sessions = db_sessions if db_sessions else []
@@ -1414,7 +1414,8 @@ def start_session():
         "meta": {"framework_counts": {}, "relevance_issues": 0}
     }
     SESSIONS[session_id] = session_data
-    # Only save to Supabase on session complete (with final report)
+    # Save to Supabase immediately when session starts
+    save_session_to_db(session_data)
 
     return jsonify({
         "session_id": session_id, 
@@ -1506,8 +1507,9 @@ def chat(session_id: str):
         meta["framework_counts"] = counts
         sess["meta"] = meta
         
-    # Persist response in memory (only saved to Supabase on session complete)
+    # Persist in memory and save to database after each turn
     sess["transcript"].append({"role": "assistant", "content": raw_response})
+    save_session_to_db(sess)
  
     return jsonify({
         "follow_up": clean_response, 
@@ -1683,21 +1685,20 @@ def get_report_data(session_id: str):
     else:
         # Check database
         if USE_DATABASE:
-            from models import get_session_by_id
-            db_sess = get_session_by_id(session_id)
+            db_sess = get_session_from_db(session_id)
             if not db_sess:
                 return jsonify({"error": "Session not found"}), 404
             
             # If session has a user_id, require authentication and ownership verification
-            if db_sess.user_id:
+            if db_sess.get("user_id"):
                 if not user:
                     return jsonify({"error": "Unauthorized: This session requires authentication"}), 401
-                if str(db_sess.user_id) != str(user.id):
+                if str(db_sess.get("user_id")) != str(user.id):
                     return jsonify({"error": "Forbidden: This session belongs to another user"}), 403
             # else: guest session - allow access
             
             # Load into memory for processing
-            sess = db_sess.to_dict()
+            sess = db_sess
             SESSIONS[session_id] = sess
         else:
              return jsonify({"error": "Session not found"}), 404
