@@ -2252,7 +2252,7 @@ class DashboardPDF(FPDF):
             for item in heat_map:
                 self.check_space(10)
                 dim = sanitize_text(str(item.get('dimension', '')))
-                score_val = float(item.get('score', 0))
+                score_val = self._extract_score_value(str(item.get('score', 0)))
 
                 self.set_x(15)
                 self.set_font('helvetica', 'B', 9)

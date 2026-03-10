@@ -231,9 +231,13 @@ export default function Report() {
     const [showTranscript, setShowTranscript] = useState(false)
 
     useEffect(() => {
+        let isMounted = true;
+        let retryCount = 0;
+        const maxRetries = 30; // Wait up to 90 seconds (3s * 30)
+
         const fetchReport = async () => {
             try {
-                if (!sessionId) return
+                if (!sessionId) return;
 
                 const { data: { session } } = await supabase.auth.getSession();
                 const headers: Record<string, string> = {
@@ -243,18 +247,37 @@ export default function Report() {
                     headers['Authorization'] = `Bearer ${session.access_token}`;
                 }
 
-                const response = await fetch(getApiUrl(`/api/session/${sessionId}/report_data`), { headers })
-                if (!response.ok) throw new Error("Failed to fetch report data")
-                const data: GenericReportData = await response.json()
-                setData(data)
-                setLoading(false)
+                const response = await fetch(getApiUrl(`/api/session/${sessionId}/report_data`), { headers });
+                
+                // If the report is still generating, wait and retry!
+                if (response.status === 400 || response.status === 404) {
+                    if (retryCount < maxRetries && isMounted) {
+                        retryCount++;
+                        console.log(`Report not ready. Retrying in 3s... (Attempt ${retryCount}/${maxRetries})`);
+                        setTimeout(fetchReport, 3000);
+                        return;
+                    }
+                }
+
+                if (!response.ok) throw new Error("Failed to fetch report data");
+                const data: GenericReportData = await response.json();
+                
+                if (isMounted) {
+                    setData(data);
+                    setLoading(false);
+                }
             } catch (err) {
-                console.error("Error generating report:", err)
-                setLoading(false)
+                console.error("Error generating report:", err);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
-        }
-        fetchReport()
-    }, [sessionId])
+        };
+
+        fetchReport();
+
+        return () => { isMounted = false; };
+    }, [sessionId]);
 
     const handleDownload = async () => {
         try {

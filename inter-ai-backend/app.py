@@ -111,9 +111,9 @@ SESSIONS = TTLCache(maxsize=500, ttl=3600)
 # ---------------------------------------------------------
 # Hybrid Storage Helper Functions
 # ---------------------------------------------------------
-def get_session(session_id: str) -> Dict[str, Any]:
+def get_session(session_id: str, force_db_refresh: bool = False) -> Dict[str, Any]:
     """Get session from in-memory storage or database."""
-    if session_id in SESSIONS:
+    if not force_db_refresh and session_id in SESSIONS:
         return SESSIONS[session_id]
     
     # Try database
@@ -122,6 +122,10 @@ def get_session(session_id: str) -> Dict[str, Any]:
         SESSIONS[session_id] = db_session
         return db_session
     
+    # Fallback to returning the stale session if DB fetch fails but memory exists
+    if session_id in SESSIONS:
+        return SESSIONS[session_id]
+        
     return None
 
 def get_authenticated_user():
@@ -1602,6 +1606,10 @@ def view_report(session_id: str):
     sess = get_session(session_id)
     if not sess: 
         return jsonify({"error": "No report"}), 404
+        
+    # If report_data is missing, maybe another worker completed it. Force a refresh from DB.
+    if not sess.get("report_data"):
+        sess = get_session(session_id, force_db_refresh=True)
     
     if not sess.get("report_data"):
         return jsonify({"error": "Report data not available yet"}), 400
@@ -1708,9 +1716,16 @@ def get_report_data(session_id: str):
              return jsonify({"error": "Session not found"}), 404
 
 
-    
+    # If report_data is missing but the session exists, force a DB refresh
+    # in case a different worker generated the report and saved it to the DB.
+    if not sess.get("report_data") and USE_DATABASE:
+        refreshed = get_session_from_db(session_id)
+        if refreshed:
+            sess = refreshed
+            SESSIONS[session_id] = sess
+            
     # Return cached data if available
-    if sess["report_data"]:
+    if sess.get("report_data"):
         response = sess["report_data"].copy()
         response["transcript"] = sess["transcript"]
         response["scenario"] = sess["scenario"] or "No context available."
