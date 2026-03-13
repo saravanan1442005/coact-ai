@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { Download, AlertCircle, Target, History, Zap, Award, BookOpen, MessageSquare, ChevronRight, Check, X, AlertTriangle, ArrowLeft, Clock, CheckCircle2, Brain, Quote, Lightbulb, Activity, BarChart, TrendingUp, Flag } from "lucide-react"
+import { Download, AlertCircle, Target, History, Zap, Award, BookOpen, MessageSquare, ChevronRight, Check, X, AlertTriangle, ArrowLeft, ArrowRight, Clock, CheckCircle2, Brain, Quote, Lightbulb, Activity, BarChart, TrendingUp, Flag, Mic } from "lucide-react"
 import { motion, Variants } from "framer-motion"
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts"
 
@@ -59,7 +59,24 @@ interface GenericReportData {
     mentorship_observations?: MentorshipObservation[]
     learning_takeaways?: string[]
     reflection_prompts?: string[]
+    comparison?: ComparisonData | null
     [key: string]: any
+}
+
+interface ComparisonDelta {
+    dimension: string
+    previous: number
+    current: number
+    change: number
+}
+
+interface ComparisonData {
+    has_previous: boolean
+    previous_score: number | null
+    current_score: number | null
+    score_change: number | null
+    previous_date: string | null
+    dimension_deltas: ComparisonDelta[]
 }
 
 
@@ -130,6 +147,14 @@ interface SimulationReportData extends GenericReportData {
     mentorship_observations?: MentorshipObservation[];
     learning_takeaways?: string[];
     reflection_prompts?: string[];
+    speech_analysis?: {
+        total_words?: number;
+        filler_count?: number;
+        filler_ratio?: number;
+        filler_breakdown?: Record<string, number>;
+        wpm?: number;
+        wpm_label?: string;
+    };
 }
 
 // Mentorship-specific types
@@ -447,6 +472,10 @@ export default function Report() {
                     </div>}
                 </motion.div>
 
+                {/* COMPARISON BANNER */}
+                {data.comparison && data.comparison.has_previous && (
+                    <ComparisonBanner comparison={data.comparison} />
+                )}
 
                 <motion.div variants={containerVars} initial="hidden" animate="show">
                     {renderContent()}
@@ -480,6 +509,93 @@ export default function Report() {
                 )}
             </main>
         </div>
+    )
+}
+
+// --- COMPARISON BANNER ---
+const ComparisonBanner = ({ comparison }: { comparison: ComparisonData }) => {
+    const change = comparison.score_change
+    const isImproved = change !== null && change > 0
+    const isDeclined = change !== null && change < 0
+    const prevDate = comparison.previous_date
+        ? new Date(comparison.previous_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : null
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className={`rounded-2xl border p-6 md:p-8 ${
+                isImproved
+                    ? 'bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20'
+                    : isDeclined
+                        ? 'bg-gradient-to-r from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20'
+                        : 'bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border-blue-500/20'
+            }`}
+        >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                {/* Left: Title + Score Change */}
+                <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl ${isImproved ? 'bg-emerald-500/20' : isDeclined ? 'bg-rose-500/20' : 'bg-blue-500/20'}`}>
+                        <TrendingUp className={`w-6 h-6 ${isImproved ? 'text-emerald-500' : isDeclined ? 'text-rose-500 rotate-180' : 'text-blue-500'}`} />
+                    </div>
+                    <div>
+                        <h3 className={`font-bold text-lg ${isImproved ? 'text-emerald-600 dark:text-emerald-400' : isDeclined ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                            {isImproved ? 'You Improved! 🎉' : isDeclined ? 'Room to Grow' : 'Same Level'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                            Compared to your previous attempt{prevDate ? ` on ${prevDate}` : ''}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Right: Score Delta */}
+                {comparison.previous_score !== null && comparison.current_score !== null && (
+                    <div className="flex items-center gap-3 bg-background/50 backdrop-blur-sm rounded-xl px-5 py-3 border border-border/50">
+                        <span className="text-2xl font-black text-muted-foreground">{comparison.previous_score}</span>
+                        <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                        <span className={`text-2xl font-black ${isImproved ? 'text-emerald-500' : isDeclined ? 'text-rose-500' : 'text-blue-500'}`}>
+                            {comparison.current_score}
+                        </span>
+                        {change !== null && change !== 0 && (
+                            <span className={`text-sm font-bold px-2 py-1 rounded-full ${isImproved ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
+                                {change > 0 ? '+' : ''}{change}
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Per-Dimension Deltas */}
+            {comparison.dimension_deltas && comparison.dimension_deltas.length > 0 && (
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {comparison.dimension_deltas.map((d, i) => {
+                        const improved = d.change > 0
+                        const declined = d.change < 0
+                        return (
+                            <div key={i} className="bg-background/60 backdrop-blur-sm rounded-xl border border-border/50 p-3 text-center">
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 line-clamp-1" title={d.dimension}>
+                                    {d.dimension}
+                                </div>
+                                <div className="flex items-center justify-center gap-1">
+                                    <span className="text-xs text-muted-foreground">{d.previous}</span>
+                                    <span className="text-muted-foreground text-xs">→</span>
+                                    <span className={`text-sm font-black ${improved ? 'text-emerald-500' : declined ? 'text-rose-500' : 'text-foreground'}`}>
+                                        {d.current}
+                                    </span>
+                                </div>
+                                {d.change !== 0 && (
+                                    <span className={`text-xs font-bold ${improved ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                        {d.change > 0 ? '+' : ''}{d.change}
+                                    </span>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </motion.div>
     )
 }
 
@@ -1289,6 +1405,79 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                     </div>
                 )}
             </div>
+
+            {/* SPEECH ANALYSIS SECTION */}
+            {data.speech_analysis && data.speech_analysis.total_words && data.speech_analysis.total_words > 0 && (
+                <GlassCard className="border-l-4 border-l-cyan-500">
+                    <SectionHeader icon={Mic} title="Speech Analysis" colorClass="text-cyan-500" bgClass="bg-cyan-500/10" />
+                    <div className="grid sm:grid-cols-3 gap-6">
+                        {/* Filler Words */}
+                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Filler Words</span>
+                            <div className={`text-4xl font-black ${(data.speech_analysis.filler_ratio || 0) > 0.05 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                {data.speech_analysis.filler_count || 0}
+                            </div>
+                            <span className="text-xs text-muted-foreground mt-1 block">
+                                {((data.speech_analysis.filler_ratio || 0) * 100).toFixed(1)}% of words
+                            </span>
+                            {data.speech_analysis.filler_breakdown && Object.keys(data.speech_analysis.filler_breakdown).length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-3 justify-center">
+                                    {Object.entries(data.speech_analysis.filler_breakdown).map(([word, count]) => (
+                                        <span key={word} className="px-2 py-0.5 bg-background rounded-full text-[10px] font-medium border border-border">
+                                            {word}: {count}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* WPM */}
+                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Words Per Minute</span>
+                            {data.speech_analysis.wpm ? (
+                                <>
+                                    <div className={`text-4xl font-black ${
+                                        data.speech_analysis.wpm > 160 ? 'text-amber-500' :
+                                        data.speech_analysis.wpm < 100 ? 'text-rose-500' :
+                                        'text-emerald-500'
+                                    }`}>
+                                        {data.speech_analysis.wpm}
+                                    </div>
+                                    <span className={`text-xs font-bold mt-1 block ${
+                                        data.speech_analysis.wpm > 160 ? 'text-amber-500' :
+                                        data.speech_analysis.wpm < 100 ? 'text-rose-500' :
+                                        'text-emerald-500'
+                                    }`}>
+                                        {data.speech_analysis.wpm_label}
+                                    </span>
+                                    <div className="w-full h-2 bg-muted rounded-full mt-3 overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-700 ${
+                                                data.speech_analysis.wpm > 160 ? 'bg-amber-500' :
+                                                data.speech_analysis.wpm < 100 ? 'bg-rose-500' :
+                                                'bg-emerald-500'
+                                            }`}
+                                            style={{ width: `${Math.min(100, (data.speech_analysis.wpm / 200) * 100)}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-[10px] text-muted-foreground mt-1 block">Ideal: 100-160 WPM</span>
+                                </>
+                            ) : (
+                                <span className="text-sm text-muted-foreground">Duration data not available</span>
+                            )}
+                        </div>
+
+                        {/* Total Words */}
+                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Total Words</span>
+                            <div className="text-4xl font-black text-cyan-500">
+                                {data.speech_analysis.total_words}
+                            </div>
+                            <span className="text-xs text-muted-foreground mt-1 block">spoken during session</span>
+                        </div>
+                    </div>
+                </GlassCard>
+            )}
 
             {/* DEEP DIVE ANALYSIS */}
             {data.deep_dive_analysis && data.deep_dive_analysis.length > 0 && (

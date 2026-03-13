@@ -2,6 +2,7 @@ import os
 import json
 import gzip
 import base64
+import hashlib
 from datetime import datetime
 from supabase import create_client, Client
 
@@ -9,6 +10,8 @@ url = os.getenv("SUPABASE_URL")
 # Use the Service Role Key for backend operations to correctly bypass RLS when writing/reading user data
 key = os.getenv("SUPABASE_SERVICE_KEY")
 supabase = create_client(url, key) if url and key else None
+
+
 
 # ---------------------------------------------------------
 # Phase 3: Transcript Compression Utilities
@@ -214,11 +217,13 @@ def get_user_sessions_from_db(user_id, limit=20, offset=0, completed_only=False)
         res = query.order("created_at", desc=True)\
             .range(offset, offset + limit - 1)\
             .execute()
-        
         sessions = []
         for row in res.data:
+            sid = row.get("session_id")
+            score = row.get("score")
+                
             sessions.append({
-                "id": row.get("session_id"),
+                "id": sid,
                 "user_id": row.get("user_id"),
                 "scenario_type": row.get("scenario_type"),
                 "session_mode": row.get("session_mode"),
@@ -231,7 +236,7 @@ def get_user_sessions_from_db(user_id, limit=20, offset=0, completed_only=False)
                 "framework": row.get("framework"),
                 "completed": row.get("completed", False),
                 "created_at": row.get("created_at"),
-                "score": row.get("score")
+                "score": score
             })
         
         return {
@@ -252,3 +257,53 @@ def clear_user_sessions_from_db(user_id):
     except Exception as e:
         print(f"[ERROR] DB Delete Sessions failed for user {user_id}: {e}")
         return False
+
+def get_user_analytics_from_db(user_id):
+    """Fetch all completed sessions with score and report_data for analytics computation.
+    
+    Returns list of dicts with: session_id, score, scenario_type, created_at, report_data.
+    Only fetches completed sessions to ensure data quality.
+    """
+    if not supabase:
+        return []
+    try:
+        res = supabase.table("practice_history")\
+            .select("session_id, score, scenario_type, session_mode, created_at, report_data")\
+            .eq("user_id", user_id)\
+            .eq("completed", True)\
+            .order("created_at", desc=True)\
+            .execute()
+        
+        rows = res.data or []
+                
+        return rows
+    except Exception as e:
+        print(f"[ERROR] DB Analytics fetch failed for user {user_id}: {e}")
+        return []
+
+def get_demo_account_limit(email):
+    """DEPRECATED: Limits are now handled via Supabase Auth user_metadata."""
+    return None
+
+def get_previous_session_scores(user_id, title, current_session_id):
+    """Fetch the most recent previous completed session with the same title for comparison."""
+    if not supabase or not user_id or not title:
+        return None
+    try:
+        res = (
+            supabase.table("practice_history")  # type: ignore[union-attr]
+            .select("session_id, score, report_data, created_at")
+            .eq("user_id", user_id)
+            .eq("title", title)
+            .eq("completed", True)
+            .neq("session_id", current_session_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+        return None
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch previous session for comparison: {e}")
+        return None

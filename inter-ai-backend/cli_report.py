@@ -880,7 +880,7 @@ class DashboardPDF(FPDF):
 
     def get_title(self, section_key):
         stype = getattr(self, 'scenario_type', 'custom')
-        return SCENARIO_TITLES.get(stype, SCENARIO_TITLES['custom']).get(section_key, section_key.upper())
+        return SCENARIO_TITLES.get(stype, SCENARIO_TITLES['universal']).get(section_key, section_key.upper())
 
     def linear_gradient(self, x, y, w, h, c1, c2, orientation='H'):
         self.set_line_width(0)
@@ -2663,17 +2663,19 @@ def generate_report(transcript, role, ai_role, scenario, framework=None, filenam
     pdf.set_context(role, ai_role, scenario)
     
     # Determine session mode early so cover page can adapt
-    session_mode = session_mode or data.get('meta', {}).get('session_mode', mode)
+    meta_data = data.get('meta', {}) if isinstance(data, dict) else {}
+    session_mode = session_mode or meta_data.get('session_mode', mode)
     pdf._session_mode = session_mode
     
     pdf.add_page()
     
     # Get scenario_type from data if available
-    scenario_type = data.get('meta', {}).get('scenario_type', scenario_type)
+    meta_data = data.get('meta', {}) if isinstance(data, dict) else {}
+    scenario_type = meta_data.get('scenario_type', scenario_type)
     
     # 1. Banner (shown for non-mentorship)
-    meta = data.get('meta', {})
-    if session_mode != "mentorship" and data.get('type') != "mentorship_reflection":
+    meta = data.get('meta', {}) if isinstance(data, dict) else {}
+    if session_mode != "mentorship" and (data.get('type') if isinstance(data, dict) else None) != "mentorship_reflection":
         pdf.draw_banner(meta, scenario_type=scenario_type)
     
     # 2. Route to correct renderer based on session mode
@@ -2681,7 +2683,7 @@ def generate_report(transcript, role, ai_role, scenario, framework=None, filenam
     
     try:
         # Check if this is a MENTORSHIP REFLECTION report (new format)
-        if session_mode == "mentorship" or data.get('type') == "mentorship_reflection":
+        if session_mode == "mentorship" or (data.get('type') if isinstance(data, dict) else None) == "mentorship_reflection":
             print(f"[INFO] Rendering Mentorship Reflection Report (observation-based learning)...")
             pdf.draw_mentorship_reflection_report(data)
         else:
@@ -2696,7 +2698,8 @@ def generate_report(transcript, role, ai_role, scenario, framework=None, filenam
         print(f"Error drawing report body: {e}")
         import traceback
         traceback.print_exc()
-        pdf.draw_key_value_grid("RAW DATA DUMP (Drawing Failed)", {k:str(v)[:100] for k,v in data.items() if k != 'meta'})
+        raw_items = data.items() if isinstance(data, dict) else []
+        pdf.draw_key_value_grid("RAW DATA DUMP (Drawing Failed)", {k:str(v)[:100] for k,v in raw_items if k != 'meta'})
 
     pdf.output(filename)
     print(f"[SUCCESS] Unified report saved: {filename} (scenario: {scenario_type})")

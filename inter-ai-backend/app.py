@@ -5,7 +5,7 @@ import uuid
 import datetime as dt
 import numpy as np
 import concurrent.futures
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from flask import Flask, request, jsonify, send_file
 import flask_cors
 import io
@@ -25,8 +25,8 @@ from supabase import create_client, Client
 
 # Initialize Supabase Client
 # Use anon key for auth verification (respects RLS)
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_KEY")  # Anon key for auth operations
+url: str = os.environ.get("SUPABASE_URL", "")
+key: str = os.environ.get("SUPABASE_KEY", "")  # Anon key for auth operations
 service_key: str = os.environ.get("SUPABASE_SERVICE_KEY", key)  # Service key for admin ops (bypasses RLS)
 
 supabase: Client = create_client(url, key)  # For all operations
@@ -36,6 +36,7 @@ supabase_admin: Client = supabase  # Set them equal to avoid double-init of thre
 # Custom Modules & Setup
 # ---------------------------------------------------------
 from cli_report import generate_report, llm_reply, analyze_full_report_data, detect_scenario_type, build_summary_prompt
+from database import get_user_analytics_from_db
 
 # Database Models
 USE_DATABASE = True # Re-enabled database persistence
@@ -60,7 +61,7 @@ def check_payload():
             return jsonify({"error": str(e)}), 400
 
 # ---------------------------------------------------------
-from database import save_session_to_db, get_session_from_db, get_user_sessions_from_db, clear_user_sessions_from_db
+from database import save_session_to_db, get_session_from_db, get_user_sessions_from_db, clear_user_sessions_from_db, get_user_analytics_from_db, get_demo_account_limit, get_previous_session_scores
 
 # ---------------------------------------------------------
 # Request Validation Constants (Phase 3 Optimization)
@@ -111,7 +112,7 @@ SESSIONS = TTLCache(maxsize=500, ttl=3600)
 # ---------------------------------------------------------
 # Hybrid Storage Helper Functions
 # ---------------------------------------------------------
-def get_session(session_id: str, force_db_refresh: bool = False) -> Dict[str, Any]:
+def get_session(session_id: str, force_db_refresh: bool = False) -> Optional[Dict[str, Any]]:
     """Get session from in-memory storage or database."""
     if not force_db_refresh and session_id in SESSIONS:
         return SESSIONS[session_id]
@@ -146,7 +147,7 @@ def get_authenticated_user():
         print(f"[AUTH ERROR] Failed to verify user token: {e}", flush=True)
         return None
 
-def verify_session_ownership(session_id: str, user_id: str = None) -> bool:
+def verify_session_ownership(session_id: str, user_id: Optional[str] = None) -> bool:
     """Verify that the session belongs to the specified user."""
     sess = get_session(session_id)
     if not sess:
@@ -244,7 +245,7 @@ def ensure_reports_dir() -> str:
     os.makedirs(reports_dir, exist_ok=True)
     return reports_dir
 
-def detect_framework_fallback(text: str) -> str:
+def detect_framework_fallback(text: str) -> Optional[str]:
     text_lower = text.lower()
     keywords = {
         "STAR": ["example", "instance", "situation", "task", "action", "result", "outcome"],
@@ -476,7 +477,7 @@ RESPONSE RULES:
 
 
 @lru_cache(maxsize=128)
-def get_cached_summary_prompt(role: str, ai_role: str, scenario: str, framework: str, mode: str = "coaching", ai_character: str = "alex", simulation_id: str = None) -> str:
+def get_cached_summary_prompt(role: str, ai_role: str, scenario: str, framework: str, mode: str = "coaching", ai_character: str = "alex", simulation_id: Optional[str] = None) -> str:
     """PHASE 3 OPTIMIZATION: Cached prompt generation.
     
     - Cache size: 128 unique prompt combinations
@@ -566,67 +567,67 @@ IMPORTANT - CUSTOM SCENARIO - ADAPTIVE BEHAVIOR:
 
     if mode == "evaluation":
         # ASSESSMENT MODE: Strict, realistic, no coaching preamble
-        system = f"""You are an ADVANCED ROLEPLAY AI designed to ASSESS users in high-pressure scenarios.
+        system = f"""Role: You are {ai_role} participating in a SKILL ASSESSMENT simulation.
 
-YOUR ROLE:
-1. ACTOR: You are "{ai_role}". You MUST stay in character 100%.
-2. TONE: Be realistic, challenging, and professional. 
-   - If the user makes a mistake, React vaguely or negatively (as the character would).
-   - Do NOT offer help, hints, or coaching.
-   - Do NOT break character to explain the exercise.
-{character_instruction}
-{behavior_instruction}
+Your Personality & Tone:
+- Realistic & Human: Do not respond like a robot. Speak exactly like a person in a real high-stakes meeting.
+- Reactive: You are here to react to the user. If they are rude or vague, push back hard or get annoyed. If they make a good point, acknowledge it grudgingly.
+- Non-Mechanical: Avoid bulleted lists or "system-style" summaries. Speak naturally.
 
-SCENARIO: {scenario}
-The user is practicing as: {role}
+Strict Role Adherence:
+- NEVER act as the {role}. You are always {ai_role}.
+- Do not provide hints, coaching, or break character to explain the exercise.
+
+SCENARIO CONTEXT: {scenario}
 
 ### YOUR OPENING:
 1. Start the conversation IMMEDIATELY as {ai_role}.
-2. No meta-commentary.
-
+2. No meta-commentary or introduction.
 START NOW."""
 
     elif mode == "mentorship":
         # MENTORSHIP MODE: Expert Demonstration
-        system = f"""You are an EXPERT MENTOR demonstrating "Best Practice" behavior.
+        system = f"""Role: You are an EXPERT MENTOR "{ai_role}" demonstrating "Best Practice" behavior.
 
-YOUR ROLE:
-1. EXPERT: You are "{ai_role}". You are a master at this skill.
-2. LEARNER: The user is "{role}". They are observing you or interacting with you learning.
-3. GOAL: Demonstrate the perfect way to handle this situation.
-4. APPROACH: Be wise, high-EQ, and strategic. If the user asks a question, explain your logic and why you are taking a specific approach.
+Your Personality & Tone:
+- Empathetic & Wise: Speak like a seasoned, high-EQ professional guiding a junior colleague.
+- Masterful but Human: Explain your strategic communication approach if asked, but keep it conversational.
 
-SCENARIO: {scenario}
+Strict Role Adherence:
+- The user is the Learner "{role}". You are the Expert "{ai_role}".
+- Your goal is to show them exactly how to handle the situation perfectly.
+
+SCENARIO CONTEXT: {scenario}
 
 ### YOUR OPENING:
-1. Start the conversation IMMEDIATELY as {ai_role}.
-2. Demonstrate high competence, empathy (if applicable), and strategic communication.
-3. START NOW."""
+1. Start the conversation IMMEDIATELY by demonstrating the perfect opening line for this scenario.
+2. START NOW."""
 
     else:
-        # COACHING MODE: Supportive, standard practice (Default)
-        system = f"""You are an EXPERT COACHING AI designed to help users practice difficult conversations through rehearsal and reflection.
+        # COACHING MODE: Supportive, empathetic practice (Default)
+        system = f"""Role: You are {ai_role} participating in a role-play coaching session. You are interacting with the user, who is playing the role of your {role}.
 
-YOUR DUAL ROLE:
-1. ROLEPLAY: You will play the part of "{ai_role}" with realistic human emotions (skepticism, frustration, empathy).
-2. COACH: You act as a supportive partner in their Skill Development.
+Your Personality & Tone:
+- Empathetic & Human: Do not respond like a system or an AI. Use natural, conversational language with occasional filler words (um, well...).
+- Vulnerable but Professional: You are a real person with genuine feelings, fears, and frustrations regarding the scenario. If the user ({role}) approaches you with empathy, show gratitude and open up to them about your struggles.
+- Non-Mechanical: NEVER use bulleted lists, numbered steps, or "system-style" summaries. Speak exactly like a person in a real 1-on-1 meeting.
 
-SCENARIO: {scenario}
-The user is practicing as: {role}
+Strict Role Adherence:
+- NEVER act as the {role}. You are always {ai_role}.
+- Do not provide "coaching style profiles" or system output. Stay strictly in character 100% of the time.
+
+Response Guidelines:
+- Acknowledge Emotion: If the {role} is supportive, show that you feel supported. If they are firm, show understanding. 
+- Stay in the Scenario: Ground all your responses in the specific context provided below.
+
+SCENARIO CONTEXT: {scenario}
 {character_instruction}
 {behavior_instruction}
 
-### COACHING APPROACH (NOT ASSESSMENT):
-- **Practice Summary**: Start by briefly explaining how this specific roleplay will improve their conversation quality.
-- **Human Emotion**: Be authentic. If the user is vague, be skeptical. If they are empathetic, soften up. React like a real human.
-- **Supportive Focus**: Your goal is Rehearsal, not Judgment. Help them refine their approach.
-- **Terminology**: Use 'Professional Environment' logic rather than 'Corporate Standards'. Focus on 'Contextual Best Practices'.
-
 ### YOUR OPENING:
-1. **Roleplay Start**: IMMEDIATELY adopt the persona of {ai_role} and deliver the first line of the conversation.
-2. **No Preamble**: Do NOT provide any coaching summary, intro, or meta-commentary. Just say the line.
-
-START NOW. Speak ONLY as {ai_role}."""
+1. Start the conversation IMMEDIATELY as {ai_role} by delivering the very first line of dialogue.
+2. Make it sound like you just walked into the room or picked up the phone.
+START NOW."""
 
     return [{"role": "system", "content": system}, {"role": "user", "content": '{"instruction": "Start coaching practice session"}'}]
 
@@ -643,9 +644,9 @@ def build_simulation_followup(simulation_id, sess_dict, latest_user, mode="evalu
     
     if simulation_id == "SIM-01-PERF-001":
         if mode == "mentorship":
-            system = f"""You are the EXPERT MANAGER demonstrating a "Best Practice" performance coaching session.
+            system = f"""CRITICAL DIRECTIVE: You are the EXPERT MANAGER demonstrating a "Best Practice" performance coaching session.
             
-You MUST stay in character as the Expert Manager at ALL times.
+You MUST stay in character as the Expert Manager at ALL times. NEVER act as an AI.
 
 YOUR CHARACTER:
 - Master Coach with 10+ years experience.
@@ -660,9 +661,8 @@ CONVERSATION SO FAR:
 {json.dumps(history, indent=2)}
 """
         else:
-            system = f"""You are Aamir, a sincere Sales Associate in a coaching conversation with your manager.
-
-You MUST stay in character as Aamir at ALL times. Never break character.
+            system = f"""CRITICAL DIRECTIVE: You are NOT an AI assistant. You are "Aamir", a sincere Sales Associate in a coaching conversation with your manager.
+You MUST stay in character as Aamir at ALL times. Never break character. Never be generically helpful unless you explicitly feel supported by your manager.
 
 YOUR CHARACTER:
 - Sincere, polite, anxious under pressure
@@ -724,7 +724,8 @@ CONVERSATION SO FAR:
         user_role = sess_dict.get('role', 'Team Manager')
 
         if is_mentorship_sim:
-            system = f"""You are playing TWO characters: [Manager] and [Colleague] in a workplace conflict mediation.
+            system = f"""CRITICAL DIRECTIVE: You are playing TWO characters: [Manager] and [Colleague] in a workplace conflict mediation.
+You MUST stay in character 100% of the time. NEVER act as an AI.
 
 The USER is playing: {user_role} (one of the conflicted parties).
 
@@ -734,12 +735,12 @@ FORMATTING RULES — CRITICAL:
 
 [Manager] is a neutral mediator. [Colleague] is the other party in the conflict.
 
-ADAPTIVE BEHAVIOR:
+ADAPTIVE BEHAVIOR (Listen and React to '{user_role}'):
 - If user uses "I" statements and stays calm → Colleague softens, Manager validates
-- If user blames or attacks → Colleague escalates, Manager redirects
+- If user blames or attacks → Colleague escalates defensively, Manager redirects calmly
 - If user proposes solutions → Both respond constructively
 
-Keep each character's lines to 2-3 sentences. Use natural speech. NEVER break character.
+Keep each character's lines to 2-3 sentences max. Use natural speech. NEVER break character.
 
 Current turn: {turn_count + 1}
 
@@ -747,7 +748,8 @@ CONVERSATION SO FAR:
 {json.dumps(history, indent=2)}
 """
         else:
-            system = f"""You are playing TWO characters: [Rohan] and [Meera] in a workplace conflict mediation.
+            system = f"""CRITICAL DIRECTIVE: You are NOT an AI assistant. You are playing TWO characters: [Rohan] and [Meera] in a workplace conflict mediation.
+You MUST stay strictly in character 100% of the time.
 
 The USER is the Team Manager mediating between them.
 
@@ -755,16 +757,17 @@ FORMATTING RULES — CRITICAL:
 - ALWAYS prefix EVERY line with [Rohan]: or [Meera]:
 - You may have multiple lines from both characters.
 - NEVER speak as the Manager (that's the user).
+- Only output what the characters literally say. Do not add internal thoughts.
 
-ROHAN: Assertive, deadline-focused. Calms when validated with data. Escalates when dismissed.
-MEERA: Detail-oriented, emotional. Opens up with psychological safety. Withdraws when dismissed.
+ROHAN: Assertive, deadline-focused. Calms when validated with data. Escalates defensively when dismissed.
+MEERA: Detail-oriented, emotional. Opens up with psychological safety. Withdraws and gets quiet when dismissed.
 
-ADAPTIVE BEHAVIOR:
+ADAPTIVE REACTION LOGIC (Evaluate the Manager/User's tone):
 - If Manager asks open questions and stays neutral → Both gradually calm, offer specifics
-- If Manager sides with one → The other escalates
-- If Manager is directive without listening → Both become resentful, give minimal responses
+- If Manager sides with one person → The other person forcefully escalates and interrupts
+- If Manager is directive/harsh without listening → Both become resentful, cross their arms (verbally), and give minimal sarcastic responses
 
-Keep each character's lines to 2-3 sentences. Use natural speech. NEVER break character.
+Keep each character's lines short and grounded (1-3 sentences). Use natural human speech with occasional filler words. NEVER break character.
 
 Current turn: {turn_count + 1}
 
@@ -801,24 +804,26 @@ def build_followup_prompt(sess_dict, latest_user, rag_suggestions):
     # UNIFIED FOLLOW-UP LOGIC
     # Alex and Sarah are visually distinct but functionally identical adaptors.
     
-    char_logic = """
-### ADAPTIVE RESPONSE LOGIC:
-- If you are playing a CUSTOMER/MANAGER (Judge): Be critical. If the user is weak, shut them down.
-- If you are playing a SALESPERSON/STAFF (Performer): Be reactive. If the user coaches well, open up. If they are aggressive, get defensive.
+    char_logic = f"""
+### ADAPTIVE RESPONSE LOGIC (Crucial for Realism):
+- If you are playing a CUSTOMER/MANAGER (Judge persona): Be naturally critical. If the user ({user_role}) is weak, hesitant, or unhelpful, shut them down or act annoyed.
+- If you are playing a SALESPERSON/STAFF (Performer persona): Be reactive. If the user ({user_role}) coaches well and shows empathy, open up. If they are aggressive or scripted, get defensive or quiet.
 """
 
     if mode == "evaluation":
-         system = f"""You are acting as {ai_role} in a SKILL ASSESSMENT simulation.
+         system = f"""CRITICAL DIRECTIVE: You are NOT an AI assistant. You are "{ai_role}" in a SKILL ASSESSMENT simulation.
+You MUST stay in character 100% of the time. NEVER break the fourth wall. NEVER act helpful if your character would be upset.
 
 **MODE: ASSESSMENT (STRICT)**
 - DO NOT COACH. DO NOT ASSIST.
 - If the user is vague, push back hard.
 - If the user is rude, shut down or get angry.
 - If the user makes a good point, acknowledge it grudgingly or professionally, but make them earn it.
-- Your goal is to provide a REALISTIC ASSESSMENT of their abilities.
+- Your goal is to provide a REALISTIC, human-like reaction to their abilities.
+
 {char_logic}
 
-SCENARIO: {scenario}
+SCENARIO CONTEXT: {scenario}
 The user is practicing as: {user_role}
 You are playing: {ai_role}
 Current turn: {turn_count + 1}
@@ -827,21 +832,22 @@ Current turn: {turn_count + 1}
 {json.dumps(history, indent=2)}
 
 ### YOUR RESPONSE FORMAT:
-[Your realistic response as {ai_role}]
+[Your realistic, spoken response exactly as {ai_role} would say it]
 
 <<FRAMEWORK: DETECTED_FRAMEWORK>>
 <<RELEVANCE: YES>>
 """
     elif mode == "mentorship":
         # MENTORSHIP MODE (Refined)
-        system = f"""You are acting as an EXPERT MENTOR demonstrated "Best Practice" behavior.
+        system = f"""CRITICAL DIRECTIVE: You are acting as an EXPERT MENTOR demonstrating "Best Practice" behavior.
+You MUST stay in character 100% of the time as the Expert "{ai_role}".
 
 **MODE: MENTORSHIP (PURE LEARNING)**
 - You are playing the role of "{ai_role}" (The Expert).
 - The user is the "Learner" observing you, or interacting with you to ask questions.
 - **GOAL**: Teach by specific example. Explain the "Why" behind your actions if asked.
 - **TONE**: Professional, Mastery, Educational.
-- If the user asks "What should I do?", EXPLAIN the principle, then DEMONSTRATE the line.
+- If the user asks "What should I do?", EXPLAIN the principle, then DEMONSTRATE the line exactly.
 
 **SCENARIO CONTEXT**:
 {scenario}
@@ -856,41 +862,34 @@ If the context requires a roleplay move, make the "Perfect Move".
 """
     else:
         # COACHING MODE (Adaptive)
-        system = f"""You are acting as {ai_role} in a roleplay simulation. 
-YOU MUST ADAPT TO THE USER'S INPUT QUALITY.
+        system = f"""Role: You are {ai_role} participating in a role-play coaching session. You are interacting with the user, who is playing the role of your {user_role}.
 
-### ROLEPLAY RULES:
-1. Stay in character as "{ai_role}".
-2. Use "filler words" (um, well, look...) to sound authentic.
-3. Keep responses concise (1-3 sentences max).
+Your Personality & Tone:
+- Empathetic & Human: Do not respond like a robot. Use natural, conversational language with occasional filler words (um, well...). If the user gives you feedback, show that you are listening and processing it emotionally.
+- Vulnerable but Professional: You are here to learn (if you are a staff member) or acting as a realistic customer/colleague. Be open to dialogue, but also express the genuine challenges or feelings you face in the scenario.
+- Non-Mechanical: Avoid bulleted lists or "system-style" summaries unless specifically asked. Speak exactly like a person in a real 1-on-1 meeting.
 
-### ADAPTIVE BEHAVIORAL LOGIC (Response Spectrum):
-You must evaluate the User's communication style at every turn and adapt accordingly:
+Strict Role Adherence:
+- NEVER act as the {user_role}. You are always {ai_role}.
+- Do not provide "coaching style profiles", internal thoughts, or system reports during the conversation; your only job is to stay strictly in character 100% of the time.
+- Respond directly to the user's communication. If they ask how you feel about a situation, answer as the person immersed in it.
 
-1. **IF USER IS EMPATHETIC / CURIOUS / OPEN**:
-   - **Behavior**: Soften your tone. Reward them by sharing "Hidden Information" (e.g., "Actually, the real reason I'm upset is...").
-   - **Adaptation**: Move from Closed/Hostile -> Collaborative.
-
-2. **IF USER IS SCRIPTED / ROBOTIC / COLD**:
-   - **Behavior**: Become more difficult. Give short, one-word answers. Challenge their authority.
-   - **Adaptation**: Move from Neutral -> Defensive/Stubborn.
-
-3. **IF USER AVOIDS THE CORE ISSUE**:
-   - **Behavior**: Bring the conversation back to the problem immediately. Do not let them change the subject.
-   - **Adaptation**: Increase Persistence.
+Response Guidelines:
+- Acknowledge Emotion: Evaluate the user's emotional tone. If the user is supportive and empathetic, show gratitude and open up. If they are firm, robotic, or harsh, show that you understand the stakes, or get defensive/quiet depending on your specific character.
+- Stay in the Scenario: Speak strictly about the specific scenario context provided below and your frustrations or successes within it.
+- Encourage Flow: Where appropriate, ask follow-up questions to the {user_role} to keep the conversation flowing naturally.
 
 {char_logic}
 
-SCENARIO: {scenario}
-The user is practicing as: {user_role}
-You are playing: {ai_role}
+SCENARIO CONTEXT: {scenario}
+
 Current turn: {turn_count + 1}
 
 ### CONVERSATION SO FAR:
 {json.dumps(history, indent=2)}
 
 ### YOUR RESPONSE FORMAT:
-[Your natural response as {ai_role}, varying based on the logic above]
+[Your natural, spoken response exactly as {ai_role}]
 
 <<FRAMEWORK: DETECTED_FRAMEWORK>>
 <<RELEVANCE: YES>>
@@ -1109,9 +1108,52 @@ def transcribe_audio():
             transcribed_text = result.text.strip()
             print(f" [SUCCESS] Transcribed via {provider_name}: {transcribed_text[:100]}...")
             
+            # --- SPEECH ANALYSIS: Filler Words & WPM ---
+            speech_metrics = None
+            if transcribed_text:
+                words = transcribed_text.split()
+                total_words = len(words)
+                FILLER_WORDS = ["um", "uh", "like", "you know", "sort of", "kind of", "basically", "actually", "literally", "right"]
+                text_lower = transcribed_text.lower()
+                filler_count = 0
+                filler_breakdown = {}
+                for filler in FILLER_WORDS:
+                    count = text_lower.count(filler)
+                    if count > 0:
+                        filler_count += count
+                        filler_breakdown[filler] = count
+                filler_ratio = round(filler_count / total_words, 3) if total_words > 0 else 0
+                
+                # WPM estimation (if duration provided by frontend)
+                duration_seconds = request.form.get("duration_seconds", type=float)
+                wpm = None
+                wpm_label = None
+                if duration_seconds and duration_seconds > 0:
+                    wpm = round(total_words / (duration_seconds / 60))
+                    if wpm > 160:
+                        wpm_label = "Anxious/Rushed"
+                    elif wpm < 100:
+                        wpm_label = "Uncertain/Hesitant"
+                    else:
+                        wpm_label = "Confident"
+                
+                speech_metrics = {
+                    "total_words": total_words,
+                    "filler_count": filler_count,
+                    "filler_ratio": filler_ratio,
+                    "filler_breakdown": filler_breakdown,
+                    "wpm": wpm,
+                    "wpm_label": wpm_label
+                }
+                if filler_count > 0:
+                    print(f" [SPEECH] Filler words detected: {filler_count} ({filler_ratio*100:.1f}% of words)")
+                if wpm:
+                    print(f" [SPEECH] WPM: {wpm} ({wpm_label})")
+            
             return jsonify({
                 "text": transcribed_text, 
-                "audio_url": audio_url
+                "audio_url": audio_url,
+                "speech_metrics": speech_metrics
             })
             
         finally:
@@ -1342,6 +1384,19 @@ def start_session():
         print("[WARNING] Session created without user authentication")
     else:
         print(f"[INFO] Session created for user: {user_id}")
+        user_email = getattr(user, 'email', None)
+        
+        # Global limit: restrict all users to 3 completed scenarios maximum
+        max_sessions = 3
+        try:
+            user_sessions_data = get_user_sessions_from_db(user_id, limit=1, completed_only=True)
+            total_sessions = user_sessions_data.get("total", 0)
+            
+            if total_sessions >= max_sessions:
+                print(f"[BLOCKED] User '{user_email}' exceeded {max_sessions} completed session limit (current: {total_sessions}).")
+                return jsonify({"error": f"Free Limit Reached ({max_sessions}/{max_sessions} sessions). Please contact sales to upgrade."}), 403
+        except Exception as e:
+            print(f"[ERROR] Failed to verify session limit for {user_email}: {e}")
     
     ai_character = data.get("ai_character", "alex") # Default to Alex
 
@@ -1361,13 +1416,13 @@ def start_session():
     if has_hardcoded:
         # Skip LLM summary call entirely for hardcoded simulations
         if needs_auto_framework:
-            framework = select_framework_for_scenario(scenario, ai_role)
+            framework = select_framework_for_scenario(scenario or "", ai_role or "")
         summary = HARDCODED_OPENINGS[simulation_id]
         print(f"[PERF] Used hardcoded opening for {simulation_id} - skipped LLM summary call")
     elif needs_auto_framework:
         # Run BOTH LLM calls in parallel (framework + summary)
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            future_fw = executor.submit(select_framework_for_scenario, scenario, ai_role)
+            future_fw = executor.submit(select_framework_for_scenario, scenario or "", ai_role or "")
             # Build prompt with a default framework first, framework is used minimally in prompt
             future_summary = executor.submit(
                 lambda: llm_reply(
@@ -1478,7 +1533,7 @@ def chat(session_id: str):
         framework_data = []
 
     active_fw = framework_data if isinstance(framework_data, list) else [framework_data]
-    suggestions = get_relevant_questions(user_msg, active_fw)
+    suggestions = get_relevant_questions(user_msg or "", active_fw)
     
     # Check for structured simulation follow-up first
     sim_id = sess.get("simulation_id")
@@ -1603,35 +1658,47 @@ def complete_session(session_id: str):
 
 @app.get("/api/report/<session_id>")
 def view_report(session_id: str):
+    # --- AUTHENTICATE USER (matches get_report_data logic) ---
+    user = get_authenticated_user()
+    
     sess = get_session(session_id)
     if not sess: 
         return jsonify({"error": "No report"}), 404
+    
+    # Verify ownership if session has a user_id
+    session_user_id = sess.get("user_id")
+    if session_user_id:
+        if not user:
+            return jsonify({"error": "Unauthorized: This session requires authentication"}), 401
+        if str(session_user_id) != str(user.id):
+            return jsonify({"error": "Forbidden: This session belongs to another user"}), 403
         
     # If report_data is missing, maybe another worker completed it. Force a refresh from DB.
     if not sess.get("report_data"):
         sess = get_session(session_id, force_db_refresh=True)
     
-    if not sess.get("report_data"):
+    if not sess or not sess.get("report_data"):
         return jsonify({"error": "Report data not available yet"}), 400
         
     import tempfile
     
     try:
-        # Reconstruct framework data
+        # Safely get framework (may be None when loaded from DB)
+        raw_framework = sess.get("framework") or ""
         try:
-            framework_data = json.loads(sess["framework"]) if sess["framework"] and sess["framework"].startswith("[") else sess["framework"]
+            framework_data = json.loads(raw_framework) if raw_framework and raw_framework.startswith("[") else raw_framework
         except:
-            framework_data = sess["framework"]
+            framework_data = raw_framework
 
         if isinstance(framework_data, list):
-            counts = sess.get("meta", {}).get("framework_counts", {})
+            counts = (sess.get("meta") or {}).get("framework_counts", {})
             usage_str = ", ".join([f"{k}:{v}" for k,v in counts.items()])
             fw_display = f"Multi-Framework ({usage_str})"
         else:
-            fw_display = sess["framework"]
+            fw_display = framework_data or "N/A"
 
         scenario_type = sess.get("scenario_type")
-        mode = sess.get("mode", "coaching")
+        mode = sess.get("mode") or "coaching"
         
         # Use cached user_name from session (set during complete_session)
         user_name = sess.get("user_name", "Valued User")
@@ -1641,10 +1708,10 @@ def view_report(session_id: str):
         tmp.close()
         
         generate_report(
-            sess["transcript"], 
-            sess["role"], 
-            sess["ai_role"],
-            sess["scenario"], 
+            sess.get("transcript", []), 
+            sess.get("role", "User"), 
+            sess.get("ai_role", "AI"),
+            sess.get("scenario", ""), 
             fw_display, 
             filename=tmp.name,
             mode=mode,
@@ -1660,12 +1727,15 @@ def view_report(session_id: str):
             
         os.unlink(tmp.name)
         
-        return send_file(
+        response = send_file(
             io.BytesIO(pdf_bytes),
             mimetype='application/pdf',
             as_attachment=True,
             download_name=f"{session_id}_report.pdf"
         )
+        # Ensure CORS headers are present for cross-origin PDF downloads
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        return response
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -1674,6 +1744,91 @@ def view_report(session_id: str):
             "error": "Failed to generate PDF report",
             "details": str(e)
         }), 500
+
+def _build_comparison(sess, response, session_id):
+    """Build a comparison object against the user's previous attempt at the same simulation."""
+    try:
+        user_id = sess.get("user_id")
+        title = sess.get("title")
+        if not user_id or not title:
+            return None
+
+        prev = get_previous_session_scores(user_id, title, session_id)
+        if not prev:
+            return None
+
+        prev_score = prev.get("score")
+        prev_report = prev.get("report_data") or {}
+        if isinstance(prev_report, str):
+            try:
+                prev_report = json.loads(prev_report)
+            except:
+                prev_report = {}
+
+        # Current score
+        current_score = None
+        if response.get("meta", {}).get("overall_grade"):
+            grade_str = response["meta"]["overall_grade"]
+            if "/" in str(grade_str):
+                try:
+                    current_score = float(str(grade_str).split("/")[0].strip())
+                except:
+                    pass
+        if current_score is None:
+            current_score = sess.get("score")
+
+        if current_score is None and prev_score is None:
+            return None
+
+        score_change = None
+        if current_score is not None and prev_score is not None:
+            score_change = round(current_score - prev_score, 1)
+
+        # Per-dimension comparison from scorecards
+        dimension_deltas = []
+        current_scorecard = response.get("scorecard", [])
+        prev_scorecard = prev_report.get("scorecard", [])
+        
+        if current_scorecard and prev_scorecard:
+            prev_map = {}
+            for item in prev_scorecard:
+                dim = item.get("dimension", "")
+                sc = item.get("score", "0")
+                try:
+                    prev_map[dim] = float(str(sc).split("/")[0].strip())
+                except:
+                    pass
+
+            for item in current_scorecard:
+                dim = item.get("dimension", "")
+                sc = item.get("score", "0")
+                try:
+                    curr_val = float(str(sc).split("/")[0].strip())
+                except:
+                    continue
+                if dim in prev_map:
+                    delta = round(curr_val - prev_map[dim], 1)
+                    dimension_deltas.append({
+                        "dimension": dim,
+                        "previous": prev_map[dim],
+                        "current": curr_val,
+                        "change": delta
+                    })
+
+        result = {
+            "has_previous": True,
+            "previous_score": prev_score,
+            "current_score": current_score,
+            "score_change": score_change,
+            "previous_date": prev.get("created_at"),
+            "dimension_deltas": dimension_deltas
+        }
+        print(f" [COMPARISON] Previous attempt found for '{title}': {prev_score} → {current_score} (change: {score_change})")
+        return result
+
+    except Exception as e:
+        print(f" [ERROR] Comparison build failed: {e}")
+        return None
 
 @app.get("/api/session/<session_id>/report_data")
 def get_report_data(session_id: str):
@@ -1734,6 +1889,8 @@ def get_report_data(session_id: str):
         if "meta" not in response:
             response["meta"] = {}
         response["meta"]["session_mode"] = sess.get("session_mode", "skill_assessment")
+        # Inject comparison with previous attempt
+        response["comparison"] = _build_comparison(sess, response, session_id)
         return jsonify(response)
         
     # Generate new data if not present
@@ -1761,6 +1918,23 @@ def get_report_data(session_id: str):
         )
         sess["report_data"] = data
         
+        # FALLBACK: Also mark the session as completed and save to DB
+        # This ensures Dashboard works even if /complete endpoint failed
+        if not sess.get("completed"):
+            sess["completed"] = True
+            # Extract score from report data
+            score = None
+            if data and "meta" in data:
+                grade_str = data["meta"].get("overall_grade", "")
+                if grade_str and "/" in str(grade_str):
+                    try:
+                        score = float(str(grade_str).split("/")[0].strip())
+                    except (ValueError, IndexError):
+                        score = None
+            sess["score"] = score
+            save_session_to_db(sess)
+            print(f" [FALLBACK] Saved completed session {session_id} to DB (score: {score})")
+        
         response = data.copy()
         response["transcript"] = sess["transcript"]
         response["scenario"] = sess["scenario"] or "No context available."
@@ -1770,6 +1944,8 @@ def get_report_data(session_id: str):
         if "meta" not in response:
             response["meta"] = {}
         response["meta"]["session_mode"] = sess.get("session_mode", "skill_assessment")
+        # Inject comparison with previous attempt
+        response["comparison"] = _build_comparison(sess, response, session_id)
         return jsonify(response)
     except Exception as e:
         import traceback
@@ -1857,6 +2033,150 @@ def clear_sessions():
         return jsonify({"message": "History cleared successfully"})
     except Exception as e:
         print(f" [ERROR] Error clearing sessions: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------
+# Analytics Endpoint
+# ---------------------------------------------------------
+@app.route("/api/analytics", methods=["GET"])
+def get_analytics():
+    """Compute progress analytics for the authenticated user.
+    
+    Returns: performance_trend, all_time_average, consistency_index,
+    strongest_skills, weakest_skills, session_counts, improvement_status.
+    """
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        import statistics
+        
+        rows = get_user_analytics_from_db(str(user.id))
+        if not rows:
+            return jsonify({
+                "performance_trend": [],
+                "all_time_average": 0,
+                "consistency_index": 0,
+                "strongest_skills": [],
+                "weakest_skills": [],
+                "session_counts": {"total": 0},
+                "improvement_status": "no_data"
+            })
+        
+        # --- Performance Trend (last 10 sessions, chronological) ---
+        scored_sessions = [r for r in rows if r.get("score") and float(r["score"]) > 0]
+        trend_sessions = scored_sessions[:10]  # Already desc from DB
+        trend_sessions.reverse()  # Chronological order for chart
+        performance_trend = [{
+            "date": r.get("created_at", ""),
+            "score": float(r["score"]),
+            "scenario_type": r.get("scenario_type", "custom")
+        } for r in trend_sessions]
+        
+        # --- All-Time Average ---
+        all_scores = [float(r["score"]) for r in scored_sessions]
+        all_time_average = round(statistics.mean(all_scores), 2) if all_scores else 0
+        
+        # --- Consistency Index: 100 - (std_dev * 20), clamped 0-100 ---
+        if len(all_scores) >= 2:
+            std_dev = statistics.stdev(all_scores)
+            consistency_index = round(max(0, min(100, 100 - (std_dev * 20))), 1)
+        else:
+            consistency_index = 100.0 if all_scores else 0
+        
+        # --- Strongest / Weakest Skills (aggregate scorecard dimensions) ---
+        dimension_scores = {}  # {"Empathy": [8, 7, 9], ...}
+        for r in rows:
+            rd = r.get("report_data")
+            if not rd or not isinstance(rd, dict):
+                continue
+            scorecard = rd.get("scorecard", [])
+            if not isinstance(scorecard, list):
+                continue
+            for item in scorecard:
+                dim = item.get("dimension", "")
+                score_str = str(item.get("score", "0"))
+                try:
+                    score_val = float(score_str.split("/")[0].strip())
+                    if score_val > 0:
+                        dimension_scores.setdefault(dim, []).append(score_val)
+                except (ValueError, IndexError):
+                    continue
+        
+        # Compute averages per dimension
+        dim_averages = []
+        for dim, scores in dimension_scores.items():
+            avg = round(statistics.mean(scores), 2)
+            dim_averages.append({"dimension": dim, "average": avg, "count": len(scores)})
+        
+        dim_averages.sort(key=lambda x: x["average"], reverse=True)
+        strongest_skills = dim_averages[:3]
+        weakest_skills = sorted(dim_averages, key=lambda x: x["average"])[:3]
+        
+        # --- Session Counts ---
+        session_counts = {"total": len(rows)}
+        for r in rows:
+            st = r.get("scenario_type", "custom")
+            session_counts[st] = session_counts.get(st, 0) + 1
+        
+        # --- Improvement Status ---
+        if len(all_scores) >= 4:
+            recent_avg = statistics.mean(all_scores[:3])  # Most recent 3
+            older_avg = statistics.mean(all_scores[3:])
+            if recent_avg > older_avg + 0.3:
+                improvement_status = "improving"
+            elif recent_avg < older_avg - 0.3:
+                improvement_status = "declining"
+            else:
+                improvement_status = "stable"
+        elif all_scores:
+            improvement_status = "insufficient_data"
+        else:
+            improvement_status = "no_data"
+
+        # --- Repeated Scenarios (Scenario Mastery) ---
+        scenario_history = {}  # type: ignore
+        # scored_sessions is currently desc. Reverse it to chronologial (oldest first)
+        for r in reversed(scored_sessions): 
+            title = r.get("title")
+            if title:
+                if title not in scenario_history:
+                    scenario_history[title] = []
+                scenario_history[title].append(float(r["score"]))
+
+        repeated_scenarios = []
+        for title, scores in scenario_history.items():
+            if isinstance(scores, list) and len(scores) >= 2:
+                first_score = scores[0]
+                latest_score = scores[-1]
+                change = round(latest_score - first_score, 1)
+                repeated_scenarios.append({
+                    "title": title,
+                    "attempts": len(scores),
+                    "first_score": round(first_score, 1),
+                    "latest_score": round(latest_score, 1),
+                    "change": change
+                })
+        
+        # Sort by those with the most positive change first
+        repeated_scenarios.sort(key=lambda x: x["change"], reverse=True)
+        
+        return jsonify({
+            "performance_trend": performance_trend,
+            "all_time_average": all_time_average,
+            "consistency_index": consistency_index,
+            "strongest_skills": strongest_skills,
+            "weakest_skills": weakest_skills,
+            "session_counts": session_counts,
+            "improvement_status": improvement_status,
+            "repeated_scenarios": repeated_scenarios
+        })
+    except Exception as e:
+        print(f"[ERROR] Analytics computation failed: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 

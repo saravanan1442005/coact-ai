@@ -118,10 +118,30 @@ export default function Conversation() {
 
     useEffect(() => {
         const timer = setInterval(() => {
-            setState(prev => ({ ...prev, elapsedSeconds: prev.elapsedSeconds + 1 }))
+            setState(prev => {
+                const newSecs = prev.elapsedSeconds + 1
+                // Show warning exactly at 4 minutes
+                if (newSecs === 240) {
+                    setTimeout(() => toast.warning("1 Minute Remaining", {
+                        description: "This conversation is limited to 5 minutes. Please wrap up your thoughts.",
+                        duration: 5000
+                    }), 0)
+                }
+                return { ...prev, elapsedSeconds: newSecs }
+            })
         }, 1000)
         return () => clearInterval(timer)
     }, [])
+
+    // Second effect to auto-end session at 5 minutes
+    useEffect(() => {
+        if (state.elapsedSeconds >= 300 && !isEnding && !sessionEndedRef.current) {
+            toast.error("Time Limit Reached", {
+                description: "The 5-minute conversation limit has been reached."
+            })
+            handleEndConversation()
+        }
+    }, [state.elapsedSeconds, isEnding])
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
 
@@ -516,13 +536,18 @@ export default function Conversation() {
             }
 
             // Call backend to complete session and generate report
-            await fetch(getApiUrl(`/api/session/${sessionId}/complete`), {
+            const completeRes = await fetch(getApiUrl(`/api/session/${sessionId}/complete`), {
                 method: 'POST',
                 headers: {
                     ...authHeaders,
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({})
             })
+
+            if (!completeRes.ok) {
+                console.error(`[COMPLETE] Server returned ${completeRes.status}`)
+            }
 
             // Update localStorage for offline reference
             if (state.sessionData) {

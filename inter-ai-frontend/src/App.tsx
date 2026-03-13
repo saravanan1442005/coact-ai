@@ -6,7 +6,9 @@ import Practice from './pages/Practice'
 import Conversation from './pages/Conversation'
 import Report from './pages/Report'
 import SessionHistory from './pages/SessionHistory'
+import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
+import LimitReached from './pages/LimitReached'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import Login from './pages/Login'
@@ -34,7 +36,9 @@ function AppContent() {
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
                     <Route path="/practice" element={<ProtectedRoute><Practice /></ProtectedRoute>} />
+                    <Route path="/limit-reached" element={<ProtectedRoute><LimitReached /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/history" element={<ProtectedRoute><SessionHistory /></ProtectedRoute>} />
                     <Route path="/conversation/:sessionId" element={<ProtectedRoute><Conversation /></ProtectedRoute>} />
                     <Route path="/report/:sessionId" element={<ProtectedRoute><Report /></ProtectedRoute>} />
@@ -43,10 +47,12 @@ function AppContent() {
         </AnimatePresence>
     )
 }
+import ScrollProgress from './components/ui/ScrollProgress'
 
 function App() {
     return (
         <BrowserRouter>
+            <ScrollProgress />
             <Toaster position="top-center" theme="dark" richColors />
             <AppContent />
         </BrowserRouter>

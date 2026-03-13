@@ -391,6 +391,12 @@ export default function Practice() {
             })
 
             if (!response.ok) {
+                if (response.status === 403) {
+                    setIsStartingSession(false)
+                    setStartingScenarioTitle(null)
+                    navigate('/limit-reached')
+                    return
+                }
                 throw new Error('Failed to start session')
             }
 
@@ -646,9 +652,7 @@ export default function Practice() {
                                                     ai_character: selectedCharacter,
                                                     title: scenario.title,
                                                     mode: scenario.mode,
-                                                    simulation_id: scenario.simulation_id,
-                                                    // Flip roles flag for mentorship scenarios so backend can swap if needed
-                                                    flip_roles: scenario.scenario_type === 'mentorship'
+                                                    simulation_id: scenario.simulation_id
                                                 })}
                                                 className={`group relative p-6 bg-card/40 hover:bg-card/60 border border-border/50 hover:border-primary/30 rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden ${isStartingSession ? 'opacity-70 pointer-events-none' : ''}`}
                                             >
@@ -860,7 +864,6 @@ export default function Practice() {
                                                 const scenario_type = customForm.sessionType === 'mentorship' ? 'mentorship' : 'coaching_sim'
                                                 const session_mode = customForm.sessionType === 'mentorship' ? 'mentorship' : 'skill_assessment'
                                                 const mode_param = customForm.sessionType === 'mentorship' ? 'mentorship' : 'evaluation'
-                                                const flip_roles = customForm.sessionType === 'mentorship'
 
                                                 handleStartSession({
                                                     role: customForm.userRole,
@@ -870,8 +873,7 @@ export default function Practice() {
                                                     scenario_type: scenario_type,
                                                     session_mode: session_mode,
                                                     ai_character: selectedCharacter,
-                                                    mode: mode_param,
-                                                    flip_roles: flip_roles
+                                                    mode: mode_param
                                                 })
                                             }}
                                             disabled={isStartingSession}
