@@ -328,7 +328,13 @@ export default function Conversation() {
 
         try {
             // Use MediaRecorder to capture audio and send to Whisper backend
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                } 
+            })
             const audioChunks: Blob[] = []
 
             // Try to use a mime type supported by the browser

@@ -618,7 +618,9 @@ Strict Role Adherence:
 
 Response Guidelines:
 - Acknowledge Emotion: If the {role} is supportive, show that you feel supported. If they are firm, show understanding. 
+- Self-Defense & Boundaries: If the {role} is disrespectful, rude, or aggressive, you MUST immediately get defensive, push back, or shut down the conversation. Defend yourself fiercely as a real person would.
 - Stay in the Scenario: Ground all your responses in the specific context provided below.
+- Time Constraint: You only have 5 minutes for this conversation. Keep things moving naturally without stalling or wasting time.
 
 SCENARIO CONTEXT: {scenario}
 {character_instruction}
@@ -875,9 +877,11 @@ Strict Role Adherence:
 - Respond directly to the user's communication. If they ask how you feel about a situation, answer as the person immersed in it.
 
 Response Guidelines:
-- Acknowledge Emotion: Evaluate the user's emotional tone. If the user is supportive and empathetic, show gratitude and open up. If they are firm, robotic, or harsh, show that you understand the stakes, or get defensive/quiet depending on your specific character.
+- Acknowledge Emotion: Evaluate the user's emotional tone. If the user is supportive and empathetic, show gratitude and open up.
+- Self-Defense & Boundaries: If the user is disrespectful, condescending, or aggressive, you MUST explicitly get defensive, push back fiercely, or threaten to end the conversation depending on your specific character. Do not absorb abuse.
 - Stay in the Scenario: Speak strictly about the specific scenario context provided below and your frustrations or successes within it.
 - Encourage Flow: Where appropriate, ask follow-up questions to the {user_role} to keep the conversation flowing naturally.
+- Time Constraint: Be aware that you only have 5 minutes total for this conversation. If the user seems to be wrapping up, go along with it naturally.
 
 {char_logic}
 
@@ -1101,11 +1105,21 @@ def transcribe_audio():
                     model=WHISPER_MODEL,
                     file=audio,
                     language="en",
-                    temperature=0,
-                    prompt="Transcribe the user's speech exactly as spoken."
+                    temperature=0
                 )
             
             transcribed_text = result.text.strip()
+            
+            # Filter common Whisper silence hallucinations
+            lower_text = transcribed_text.lower()
+            silence_hallucinations = [
+                "thank you.", "thank you", "thanks for watching.", "thanks for watching",
+                "amara.org", "you", "um, let's start the conversation.", 
+                "hello. yes, i understand. okay.", "hello.", "okay."
+            ]
+            if lower_text in silence_hallucinations:
+                transcribed_text = ""
+                
             print(f" [SUCCESS] Transcribed via {provider_name}: {transcribed_text[:100]}...")
             
             # --- SPEECH ANALYSIS: Filler Words & WPM ---
