@@ -165,11 +165,17 @@ const MENTORSHIP_SCENARIOS = [
         color: "from-blue-500 to-indigo-600",
         scenarios: [
             {
-                title: "Seeking Growth Amidst Struggle",
-                description: "As a Sales Associate, navigate a performance review with your manager to find a path forward without losing your job.",
+                title: "Observing Performance Coaching",
+                description: "Play the role of an underperforming Sales Associate. Observe how the AI Store Manager effectively coaches you.",
                 ai_role: "Store Manager",
                 user_role: "Sales Associate",
-                scenario: "CONTEXT: You are a sincere and dedicated employee, but you've missed your targets for 3 months. You are meeting with your Manager. You need to be honest about your struggles while demonstrating your commitment to improve.\n\nYOUR OBJECTIVES:\n1. Openly acknowledge the performance gap\n2. Share specific hurdles you are facing\n3. Ask for specific coaching or resources\n4. Commit to a realistic improvement plan",
+                scenario: "CONTEXT: You are a sincere employee but you have consistently missed your sales targets for 3 months.
+
+YOUR OBJECTIVES:
+1. Blame external factors for poor sales initially
+2. Open up about your lack of confidence only if asked good diagnostic questions
+3. Observe how the AI Manager uses facts and empathy to discuss the performance gap
+4. Notice how a clear improvement plan is co-created",
                 icon: "Users",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -178,11 +184,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-01-PERF-001"
             },
             {
-                title: "Managing Your Reputation",
-                description: "As a Top Performer, learn to receive feedback about your 'toxic' attitude and pivot toward leadership behavior.",
+                title: "Observing Behavioral Feedback",
+                description: "Play the role of a top performer with a toxic attitude. Observe how the AI Team Leader addresses your behavior.",
                 ai_role: "Team Leader",
                 user_role: "Top Sales Performer",
-                scenario: "CONTEXT: Your sales numbers are the best in the company, but your Team Leader has called a meeting to discuss your 'attitude.' You often feel frustrated by others' lack of pace, but you need to hear the feedback without becoming defensive.\n\nYOUR OBJECTIVES:\n1. Listen to feedback without interrupting\n2. Acknowledge the impact of your tone on others\n3. Seek advice on how to mentor instead of criticize\n4. Agree on behavior changes to protect team culture",
+                scenario: "CONTEXT: Your sales numbers exceed targets, but you are often sarcastic and dismissive of teammates. You are in a meeting with your Team Leader.
+
+YOUR OBJECTIVES:
+1. Be dismissive of the feedback and point to your high sales numbers
+2. Show frustration at your slower team members
+3. Observe how the AI Team Leader separates performance from behavior
+4. Notice the techniques used to create ownership of team culture",
                 icon: "AlertTriangle",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -191,11 +203,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-02-BEH-001"
             },
             {
-                title: "Breaking the Silence",
-                description: "As a disengaged employee, communicate your lack of motivation to your manager to find a new sense of purpose.",
+                title: "Observing Re-engagement",
+                description: "Play the role of a once-dependable but now disengaged employee. Observe how the AI Manager rebuilds your engagement.",
                 ai_role: "Manager",
                 user_role: "Disengaged Team Member",
-                scenario: "CONTEXT: You've been coasting for two months. You're doing the bare minimum because you feel stuck. Your manager has noticed. Use this meeting to express why you've lost your spark and what would re-energize you.\n\nYOUR OBJECTIVES:\n1. Honestly express your current state of mind\n2. Identify what parts of the role no longer fulfill you\n3. Propose a new project or area of interest\n4. Collaborate on a plan to rebuild engagement",
+                scenario: "CONTEXT: Over the last 6-8 weeks, your energy has dropped. You do the bare minimum and avoid extra responsibilities.
+
+YOUR OBJECTIVES:
+1. Show a lack of initiative and give minimal responses
+2. Act disinterested but not actively hostile
+3. Observe how the AI Manager explores underlying causes without assumptions
+4. Notice how the AI helps reconnect you to purpose or ownership",
                 icon: "Users",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -204,11 +222,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-03-MOT-001"
             },
             {
-                title: "Advocating for the Team",
-                description: "As a Sales Manager, present a data-driven case to your Regional Director to adjust unrealistic targets.",
-                ai_role: "Regional Director",
-                user_role: "Sales Manager",
-                scenario: "CONTEXT: You've been handed a 35% increase in targets that you know is impossible. You need to convince your Regional Director to reconsider by providing evidence, rather than just complaining.\n\nYOUR OBJECTIVES:\n1. Present market and inventory data clearly\n2. Stay professional despite potential pressure\n3. Propose a 'stretch but reachable' alternative\n4. Secure a commitment for more resources or adjusted goals",
+                title: "Observing Upward Pushback",
+                description: "Play the Regional Director handing down impossible targets. Observe how the AI Sales Manager professionally pushes back.",
+                ai_role: "Sales Manager",
+                user_role: "Regional Director",
+                scenario: "CONTEXT: You are the Regional Director and have just handed the AI (Sales Manager) a 35% target increase. You expect them to just accept it. 
+
+YOUR OBJECTIVES:
+1. Demand they hit the new targets
+2. Be skeptical of excuses
+3. Observe how the AI uses data and professionalism to push back
+4. Learn how to effectively manage upwards from the AI's approach",
                 icon: "UserCog",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -217,11 +241,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-04-COM-001"
             },
             {
-                title: "Navigating Peer Conflict",
-                description: "As one of the conflicted parties, work with your manager to resolve a breakdown in communication with a colleague.",
+                title: "Observing Conflict Resolution",
+                description: "Play the role of a frustrated team member in a conflict. Observe how the AI Manager neutralizes blame and mediates.",
                 ai_role: "Team Manager",
                 user_role: "Conflicted Team Member",
-                scenario: "CONTEXT: You and a colleague are at odds. You feel they are causing the delays, but you are now in a joint meeting with your Manager. You need to move past blame to find a professional solution.\n\nYOUR OBJECTIVES:\n1. State your perspective using 'I' statements\n2. Listen to your colleague's side with neutrality\n3. Identify the specific bottleneck in the workflow\n4. Agree to a new communication protocol",
+                scenario: "CONTEXT: You are in a conflict with a colleague and blame them for delays. You are in a mediation meeting led by the AI Manager.
+
+YOUR OBJECTIVES:
+1. Express frustration with your colleague
+2. React defensively if you feel attacked
+3. Observe how the AI Manager establishes neutrality and identifies root causes
+4. Notice the techniques used to guide you toward a working agreement",
                 icon: "Users",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -230,11 +260,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-05-CON-001"
             },
             {
-                title: "Recovering Client Trust",
-                description: "As an Account Manager, handle a high-stakes meeting with a frustrated client to save the account.",
-                ai_role: "Frustrated Key Client",
-                user_role: "Account Manager",
-                scenario: "CONTEXT: Your team missed a delivery. The client is furious and on the verge of leaving. You need to manage their emotions while protecting the company's reputation and providing a solution.\n\nYOUR OBJECTIVES:\n1. De-escalate the client's anger through active listening\n2. Avoid making promises you can't keep\n3. Outline a concrete recovery plan\n4. Secure a follow-up meeting to confirm resolution",
+                title: "Observing Client De-escalation",
+                description: "Play the role of a furious client demanding answers. Observe how the AI Account Manager de-escalates and recovers trust.",
+                ai_role: "Account Manager",
+                user_role: "Frustrated Key Client",
+                scenario: "CONTEXT: The company missed a critical delivery. You are extremely frustrated and threatening to leave for a competitor.
+
+YOUR OBJECTIVES:
+1. Express intense frustration over the missed delivery
+2. Threaten to escalate the issue
+3. Observe how the AI Account Manager acknowledges concerns without over-admitting liability
+4. Learn how to outline a concrete recovery plan under pressure",
                 icon: "ShoppingCart",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -243,11 +279,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-06-CUST-001"
             },
             {
-                title: "Stepping into Ownership",
-                description: "As a Team Member, learn to stop escalating tasks and start taking full accountability for your projects.",
+                title: "Observing Accountability Coaching",
+                description: "Play the role of a capable but dependent team member. Observe how the AI Manager establishes boundaries and accountability.",
                 ai_role: "Manager",
                 user_role: "Team Member",
-                scenario: "CONTEXT: You are capable, but you often hand tasks back to your manager when they get difficult. Your manager wants to talk about 'ownership.' You need to understand how to manage up and take the lead.\n\nYOUR OBJECTIVES:\n1. Acknowledge the pattern of shifting tasks back\n2. Identify why you hesitate to make final decisions\n3. Ask for clear decision-making boundaries\n4. Commit to a 'solution-first' reporting style",
+                scenario: "CONTEXT: You are a capable employee but you frequently hand difficult tasks back to your manager to solve. You are in a 1-on-1 meeting.
+
+YOUR OBJECTIVES:
+1. Make excuses for not completing tasks
+2. Ask the manager for answers instead of bringing solutions
+3. Observe how the AI Manager clarifies expectations without blame
+4. Notice how ownership boundaries are firmly established",
                 icon: "GraduationCap",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -256,11 +298,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-07-LEAD-001"
             },
             {
-                title: "Adapting to Change",
-                description: "As an Experienced Team Member, discuss your concerns about a new system with your Lead to find a middle ground.",
+                title: "Observing Change Management",
+                description: "Play the role of a team member resisting a new system. Observe how the AI Team Lead manages your resistance.",
                 ai_role: "Team Lead",
                 user_role: "Experienced Team Member",
-                scenario: "CONTEXT: You think the new system is a waste of time. You've been vocal about it. Your Team Lead wants to discuss your resistance. Use this to voice valid concerns while showing you're a team player.\n\nYOUR OBJECTIVES:\n1. Share specific technical concerns about the new system\n2. Avoid sounding 'anti-change' for the sake of it\n3. Offer to help pilot a more efficient version\n4. Agree to support the transition for the sake of the team",
+                scenario: "CONTEXT: You are an experienced employee who thinks the new organizational system is a waste of time and unnecessary.
+
+YOUR OBJECTIVES:
+1. Express cynicism about the new system
+2. Claim the old way worked perfectly fine
+3. Observe how the AI Team Lead understands resistance drivers without confrontation
+4. Notice how the AI reinforces purpose and encourages adaptation",
                 icon: "AlertTriangle",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -269,11 +317,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-08-CHG-001"
             },
             {
-                title: "Processing the 'No'",
-                description: "As a High Performer, professionally handle being passed over for a promotion and get a roadmap for the next one.",
+                title: "Observing Tough Career Feedback",
+                description: "Play a disappointed high performer who didn't get promoted. Observe how the AI Manager provides developmental feedback.",
                 ai_role: "Manager",
                 user_role: "High Performer",
-                scenario: "CONTEXT: You didn't get the promotion you wanted. You are disappointed. You are meeting your manager to find out why and what you need to do to be the top candidate next time.\n\nYOUR OBJECTIVES:\n1. Manage your disappointment professionally\n2. Ask for specific, actionable skill gaps\n3. Request a mentor or training for those gaps\n4. Establish a 6-month review timeline for growth",
+                scenario: "CONTEXT: You are a high performer but you were passed over for a promotion. You are disappointed and want to know why.
+
+YOUR OBJECTIVES:
+1. Express frustration and disappointment
+2. Ask why you weren't chosen in a challenging tone
+3. Observe how the AI Manager acknowledges the emotional impact while remaining firm
+4. Notice how the AI provides specific, forward-looking developmental feedback",
                 icon: "GraduationCap",
                 output_type: "scored_report",
                 mode: "evaluation",
@@ -282,11 +336,17 @@ const MENTORSHIP_SCENARIOS = [
                 simulation_id: "MENT-09-CAR-001"
             },
             {
-                title: "Admitting Burnout",
-                description: "As an Exhausted Performer, speak up about your mental health and workload before you hit a breaking point.",
+                title: "Observing Wellbeing Check-ins",
+                description: "Play the role of an exhausted, quiet high performer. Observe how the AI Manager sensitively explores signs of burnout.",
                 ai_role: "Manager",
                 user_role: "Exhausted Performer",
-                scenario: "CONTEXT: You are burned out. You're still hitting numbers, but you're exhausted and starting to resent the work. Your manager has noticed you're quieter. You need to ask for help without appearing weak.\n\nYOUR OBJECTIVES:\n1. Describe your current workload and stress levels\n2. Propose a temporary adjustment to responsibilities\n3. Discuss sustainable working habits\n4. Reaffirm your commitment to the long-term mission",
+                scenario: "CONTEXT: You are still hitting your numbers but you are exhausted and avoiding extra tasks. The AI Manager has called a meeting to check in.
+
+YOUR OBJECTIVES:
+1. Be evasive and give short responses initially
+2. Claim 'everything is fine, just busy'
+3. Observe how the AI Manager creates psychological safety without accusing
+4. Notice how the AI explores wellbeing and protects sustainable performance",
                 icon: "Users",
                 output_type: "scored_report",
                 mode: "evaluation",

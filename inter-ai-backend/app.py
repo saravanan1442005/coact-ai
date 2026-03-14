@@ -275,8 +275,8 @@ def detect_framework_fallback(text: str) -> Optional[str]:
 
 def build_simulation_prompt(simulation_id, role, ai_role, scenario, mode="evaluation"):
     """Build simulation-specific system prompts for structured coaching scenarios."""
-    if simulation_id == "SIM-01-PERF-001":
-        if mode == "mentorship":
+    if simulation_id in ("SIM-01-PERF-001", "MENT-01-PERF-001"):
+        if mode == "mentorship" or simulation_id == "MENT-01-PERF-001":
             system = f"""You are the EXPERT MANAGER demonstrating a "Best Practice" performance coaching session.
             
 YOUR ROLE:
@@ -644,8 +644,8 @@ def build_simulation_followup(simulation_id, sess_dict, latest_user, mode="evalu
     scenario = sess_dict.get('scenario', '')
     user_role = sess_dict.get('role', 'Manager')
     
-    if simulation_id == "SIM-01-PERF-001":
-        if mode == "mentorship":
+    if simulation_id in ("SIM-01-PERF-001", "MENT-01-PERF-001"):
+        if mode == "mentorship" or simulation_id == "MENT-01-PERF-001":
             system = f"""CRITICAL DIRECTIVE: You are the EXPERT MANAGER demonstrating a "Best Practice" performance coaching session.
             
 You MUST stay in character as the Expert Manager at ALL times. NEVER act as an AI.
