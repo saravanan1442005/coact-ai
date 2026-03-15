@@ -79,8 +79,12 @@ export default function Conversation() {
     const [characters, setCharacters] = useState<CharacterConfig[]>([])
 
     // Helper: Parse character-labeled lines from AI response
-    const parseCharacterLines = (text: string): { char: string; text: string; voice: string; color: string }[] => {
-        if (!multiCharacters || !characters.length) return [{ char: '', text, voice: 'fable', color: 'blue' }]
+    const parseCharacterLines = (
+        text: string,
+        chars: CharacterConfig[] = characters,
+        multi: boolean = multiCharacters
+    ): { char: string; text: string; voice: string; color: string }[] => {
+        if (!multi || !chars.length) return [{ char: '', text, voice: 'fable', color: 'blue' }]
 
         const lines = text.split('\n').filter(l => l.trim())
         const parsed: { char: string; text: string; voice: string; color: string }[] = []
@@ -229,9 +233,9 @@ export default function Conversation() {
     }
 
     // Speak multi-character text with different voices sequentially
-    const speakMultiCharacter = async (text: string) => {
+    const speakMultiCharacter = async (text: string, chars: CharacterConfig[] = characters) => {
         if (sessionEndedRef.current) return
-        const parts = parseCharacterLines(text)
+        const parts = parseCharacterLines(text, chars, true)
         for (const part of parts) {
             if (sessionEndedRef.current) break
             await speakText(part.text, undefined, part.voice)
@@ -280,7 +284,7 @@ export default function Conversation() {
             if (latestMsg.role === 'assistant' && initialTranscript.length === 1) {
                 const timer = setTimeout(() => {
                     if (sessionData.multi_characters && sessionData.characters) {
-                        speakMultiCharacter(latestMsg.content)
+                        speakMultiCharacter(latestMsg.content, sessionData.characters)
                     } else {
                         speakText(latestMsg.content, sessionData.ai_character)
                     }
@@ -471,7 +475,7 @@ export default function Conversation() {
             }))
 
             if (multiCharacters) {
-                speakMultiCharacter(aiResponse)
+                speakMultiCharacter(aiResponse, characters)
             } else {
                 speakText(aiResponse)
             }

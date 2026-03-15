@@ -261,7 +261,7 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 <div className="w-full h-[300px]">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="99%" height="99%" minWidth={10} minHeight={10}>
                                         <AreaChart data={data.performance_trend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                                             <defs>
                                                 <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">

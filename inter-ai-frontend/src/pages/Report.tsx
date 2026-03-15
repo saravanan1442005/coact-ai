@@ -735,7 +735,7 @@ const SkillRadarChart = ({ items }: { items: { dimension: string; score: number 
 
     return (
         <div className="w-full h-[300px] flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="99%" height="99%" minWidth={10} minHeight={10}>
                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
                     <PolarGrid stroke="currentColor" className="text-muted-foreground/20" />
                     <PolarAngleAxis
@@ -1042,7 +1042,6 @@ const MentorshipReflectionView = ({ data }: { data: MentorshipReflectionData }) 
             {data.interaction_highlights && (
                 <div className="space-y-6">
                     <SectionHeader icon={Zap} title="Interaction Highlights" colorClass="text-emerald-500" bgClass="bg-emerald-500/10" />
-                    <p className="text-sm text-muted-foreground -mt-4">This replaces scoring — structured observation of key patterns.</p>
                     <div className="grid lg:grid-cols-3 gap-6">
                     {data.interaction_highlights.ai_response_strategy_observed && data.interaction_highlights.ai_response_strategy_observed.length > 0 && (
                         <GlassCard className="border-t-4 border-t-purple-500">
@@ -1200,7 +1199,6 @@ const MentorshipReflectionView = ({ data }: { data: MentorshipReflectionData }) 
                     <p className="text-sm text-muted-foreground mb-4 italic">
                         {data.alternative_pathways.note || 'Based on this scenario, other effective approaches could include:'}
                     </p>
-                    <p className="text-xs text-muted-foreground mb-4">No evaluation. Just exposure.</p>
                     <div className="space-y-3">
                         {data.alternative_pathways.alternatives.map((alt, i) => (
                             <div key={i} className="flex gap-3 text-sm text-foreground/90 bg-purple-500/5 p-4 rounded-lg border border-purple-500/10">

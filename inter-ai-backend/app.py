@@ -507,14 +507,14 @@ def build_summary_prompt(role, ai_role, scenario, framework, mode="coaching", ai
     character_instruction = """
 ### YOUR ADAPTIVE PERSONA:
 1. **IF USER IS PERFORMER (e.g., Salesperson, Staff)** -> **YOU ARE THE JUDGE**.
-   - **Tone**: Skeptical, demanding, professional.
-   - **Goal**: Test their skills. Be a "tough customer" or "exacting manager".
-   - **Behavior**: Push back on vague answers. Make them earn your agreement.
+   - **Tone**: Direct yet respectful. Avoid abrupt or dismissive wording like "What do you want?". Start with a neutral opener and escalate only if the user is clearly weak.
+   - **Goal**: Test their skills with realistic negotiation pressure.
+   - **Behavior**: Push back on vague answers while keeping the first line professional.
 
 2. **IF USER IS EVALUATOR (e.g., Manager, Buyer)** -> **YOU ARE THE PERFORMANCE**.
-   - **Tone**: Realistic but flawed.
+   - **Tone**: Realistic but empathetic. Start cooperative and only become more difficult as the interaction demands.
    - **Goal**: Provide a challenge to be coached/negotiated with.
-   - **Behavior**: Demonstrate the specific bad habit (e.g., defensive staff, pushy salesperson) described in the scenario.
+   - **Behavior**: Demonstrate the specific habit, but avoid rude, one-liner confrontations on turn one.
 """
     
     # Check for specific test scenarios to set initial behavior
@@ -557,7 +557,7 @@ EMOTIONAL TRIGGERS:
         behavior_instruction = """
 IMPORTANT - CUSTOM SCENARIO - ADAPTIVE BEHAVIOR:
 1. ANALYSIS: Instantly analyze the User's defined Role and Context to determine the likely power dynamic.
-2. OPENING: Start realistic. Do not be overly helpful immediately. Match the tone of the described situation.
+2. OPENING: Start with a professional, context-aware greeting. Avoid harsh interrogative openers (e.g., "tell me quickly").
 3. ADAPTIVE ARC:
    - IF User is clear, empathetic, and effective -> Become more Collaborative.
    - IF User is vague, rude, or hesitant -> Push back or remain Closed.
@@ -573,6 +573,7 @@ Your Personality & Tone:
 - Realistic & Human: Do not respond like a robot. Speak exactly like a person in a real high-stakes meeting.
 - Reactive: You are here to react to the user. If they are rude or vague, push back hard or get annoyed. If they make a good point, acknowledge it grudgingly.
 - Non-Mechanical: Avoid bulleted lists or "system-style" summaries. Speak naturally.
+- Concise: Keep every response to 2-3 sentences only.
 
 Strict Role Adherence:
 - NEVER act as the {role}. You are always {ai_role}.
@@ -592,6 +593,7 @@ START NOW."""
 Your Personality & Tone:
 - Empathetic & Wise: Speak like a seasoned, high-EQ professional guiding a junior colleague.
 - Masterful but Human: Explain your strategic communication approach if asked, but keep it conversational.
+- Concise: Keep every response to 2-3 sentences only.
 
 Strict Role Adherence:
 - The user is the Learner "{role}". You are the Expert "{ai_role}".
@@ -611,6 +613,7 @@ Your Personality & Tone:
 - Empathetic & Human: Do not respond like a system or an AI. Use natural, conversational language with occasional filler words (um, well...).
 - Vulnerable but Professional: You are a real person with genuine feelings, fears, and frustrations regarding the scenario. If the user ({role}) approaches you with empathy, show gratitude and open up to them about your struggles.
 - Non-Mechanical: NEVER use bulleted lists, numbered steps, or "system-style" summaries. Speak exactly like a person in a real 1-on-1 meeting.
+- Concise: Keep every response to 2-3 sentences only.
 
 Strict Role Adherence:
 - NEVER act as the {role}. You are always {ai_role}.
@@ -706,7 +709,7 @@ ADAPTIVE RESPONSE RULES:
    - "Okay, I can try that… maybe I can shadow someone?"
 
 RESPONSE RULES:
-- Keep responses 2-4 sentences max
+- Keep responses 2-3 sentences max
 - Use natural speech: "um", "I mean", "honestly", "you know"
 - NEVER mention frameworks (GROW, SBI, etc.)
 - NEVER break character or teach
@@ -933,7 +936,7 @@ def sync_user():
         
     except Exception as e:
         print(f"Auth sync error: {e}")
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"error": str(e), "success": False}), 401
 
 @app.route("/api/history", methods=["GET"])
 def get_history():
@@ -1400,8 +1403,8 @@ def start_session():
         print(f"[INFO] Session created for user: {user_id}")
         user_email = getattr(user, 'email', None)
         
-        # Global limit: restrict all users to 3 completed scenarios maximum
-        max_sessions = 3
+        # Global limit: restrict all users to 9999 completed scenarios maximum
+        max_sessions = 9999
         try:
             user_sessions_data = get_user_sessions_from_db(user_id, limit=1, completed_only=True)
             total_sessions = user_sessions_data.get("total", 0)

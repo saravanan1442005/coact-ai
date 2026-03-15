@@ -309,7 +309,7 @@ Note: In the transcript, the human player is labeled 'USER' (Role: '{role}').
 The AI assistant is labeled 'ASSISTANT' (Role: '{ai_role}').
 Evaluate the 'USER' based on their participation.
 
-SCENARIO: {scenario}
+(Scenario details are in report metadata; do not rely on it in the prompt.)
 
 REQUIRED TRAITS: {', '.join(required_traits)}
 
@@ -400,7 +400,7 @@ Note: In the transcript, the human player is labeled 'USER' (Role: '{role}').
 The AI assistant is labeled 'ASSISTANT' (Role: '{ai_role}').
 Evaluate the 'USER' based on their questioning approach.
 
-SCENARIO: {scenario}
+(Scenario details are in report metadata; do not rely on it in the prompt.)
 
 CONVERSATION:
 {conversation}
@@ -673,7 +673,7 @@ def analyze_full_report_data(transcript, role, ai_role, scenario, framework=None
         f"You are {ai_character.title() if ai_character else 'a professional coach'} providing a session assessment.\n"
         f"In the conversation below, the human participant is 'USER' (Role: {role}) and the AI assistant is 'ASSISTANT' (Role: {ai_role}).\n"
         f"Your task is to analyze the 'USER' based on their participation.\n"
-        f"Context: {scenario}\n"
+        f"(Scenario content is handled separately in report metadata.)\n"
         f"{analyst_persona}\n"
         f"{unified_instruction}\n"
         f"Assessment Criteria:\n"
