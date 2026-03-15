@@ -197,6 +197,7 @@ interface MentorshipReflectionData extends Omit<GenericReportData, 'learning_tak
     type?: string
     conversation_snapshot?: MentorshipConversationSnapshot
     interaction_highlights?: {
+        note?: string
         ai_response_strategy_observed?: string[]
         questioning_techniques_used_by_ai?: string[]
         emotional_handling_patterns?: string[]
@@ -1042,6 +1043,9 @@ const MentorshipReflectionView = ({ data }: { data: MentorshipReflectionData }) 
             {data.interaction_highlights && (
                 <div className="space-y-6">
                     <SectionHeader icon={Zap} title="Interaction Highlights" colorClass="text-emerald-500" bgClass="bg-emerald-500/10" />
+                    {data.interaction_highlights.note && data.interaction_highlights.note !== "This replaces scoring — structured observation of key patterns." && (
+                        <p className="text-sm text-muted-foreground -mt-4">{data.interaction_highlights.note}</p>
+                    )}
                     <div className="grid lg:grid-cols-3 gap-6">
                     {data.interaction_highlights.ai_response_strategy_observed && data.interaction_highlights.ai_response_strategy_observed.length > 0 && (
                         <GlassCard className="border-t-4 border-t-purple-500">
@@ -1196,9 +1200,13 @@ const MentorshipReflectionView = ({ data }: { data: MentorshipReflectionData }) 
             {data.alternative_pathways && data.alternative_pathways.alternatives && data.alternative_pathways.alternatives.length > 0 && (
                 <GlassCard className="bg-gradient-to-br from-purple-500/5 to-indigo-500/5">
                     <SectionHeader icon={TrendingUp} title="Alternative Pathways" colorClass="text-purple-500" bgClass="bg-purple-500/10" />
-                    <p className="text-sm text-muted-foreground mb-4 italic">
-                        {data.alternative_pathways.note || 'Based on this scenario, other effective approaches could include:'}
-                    </p>
+                    {(() => {
+                        const altNote = data.alternative_pathways.note || 'Based on this scenario, other effective approaches could include:'
+                        if (altNote.trim() === 'No evaluation. Just exposure.') return null
+                        return (
+                            <p className="text-sm text-muted-foreground mb-4 italic">{altNote}</p>
+                        )
+                    })()}
                     <div className="space-y-3">
                         {data.alternative_pathways.alternatives.map((alt, i) => (
                             <div key={i} className="flex gap-3 text-sm text-foreground/90 bg-purple-500/5 p-4 rounded-lg border border-purple-500/10">

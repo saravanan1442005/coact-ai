@@ -79,6 +79,8 @@ export default function Conversation() {
     const [characters, setCharacters] = useState<CharacterConfig[]>([])
 
     // Helper: Parse character-labeled lines from AI response
+    const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
     const parseCharacterLines = (
         text: string,
         chars: CharacterConfig[] = characters,
@@ -89,27 +91,36 @@ export default function Conversation() {
         const lines = text.split('\n').filter(l => l.trim())
         const parsed: { char: string; text: string; voice: string; color: string }[] = []
 
+        const names = chars.map(c => escapeRegExp(c.name)).join('|')
+        const segmentRegex = new RegExp(`(?:\\[?(${names})\\]?:\\s*)([^]*?)(?=(?:\\[?(?:${names})\\]?:)|$)`, 'gi')
+
         for (const line of lines) {
-            let matched = false
-            for (const c of characters) {
-                // Match [CharName]: or CharName:
-                const regex = new RegExp(`^\\[?${c.name}\\]?:\\s*(.+)`, 'i')
-                const match = line.match(regex)
-                if (match) {
-                    parsed.push({ char: c.name, text: match[1].trim(), voice: c.voice, color: c.color })
-                    matched = true
-                    break
+            let lineProcessed = false
+            let match: RegExpExecArray | null
+            segmentRegex.lastIndex = 0
+
+            // Detect one or more labeled segments within the same line
+            while ((match = segmentRegex.exec(line)) !== null) {
+                const charName = match[1]
+                const textSegment = match[2].trim()
+                const charConfig = chars.find(c => c.name.toLowerCase() === charName.toLowerCase())
+
+                if (charConfig && textSegment) {
+                    parsed.push({ char: charConfig.name, text: textSegment, voice: charConfig.voice, color: charConfig.color })
+                    lineProcessed = true
                 }
             }
-            if (!matched && line.trim()) {
-                // Append to last character if no label
+
+            if (!lineProcessed && line.trim()) {
+                // Keep old behavior: non-labeled lines append to last parsed part
                 if (parsed.length > 0) {
                     parsed[parsed.length - 1].text += ' ' + line.trim()
                 } else {
-                    parsed.push({ char: characters[0]?.name || '', text: line.trim(), voice: characters[0]?.voice || 'fable', color: characters[0]?.color || 'blue' })
+                    parsed.push({ char: chars[0].name || '', text: line.trim(), voice: chars[0].voice || 'fable', color: chars[0].color || 'blue' })
                 }
             }
         }
+
         return parsed.length > 0 ? parsed : [{ char: '', text, voice: 'fable', color: 'blue' }]
     }
 
