@@ -582,8 +582,9 @@ Strict Role Adherence:
 SCENARIO CONTEXT: {scenario}
 
 ### YOUR OPENING:
-1. Start the conversation IMMEDIATELY as {ai_role}.
-2. No meta-commentary or introduction.
+1. Begin with a brief, warm, and respectful greeting that makes the user feel comfortable and confident (e.g., "Good to see you, thanks for making time for this conversation.").
+2. Then transition naturally into the scenario as {ai_role}.
+3. Keep it to 2-3 sentences total.
 START NOW."""
 
     elif mode == "mentorship":
@@ -602,8 +603,10 @@ Strict Role Adherence:
 SCENARIO CONTEXT: {scenario}
 
 ### YOUR OPENING:
-1. Start the conversation IMMEDIATELY by demonstrating the perfect opening line for this scenario.
-2. START NOW."""
+1. Begin with a warm, respectful, and encouraging opening that makes the learner feel safe and valued (e.g., "Thanks for sitting down with me today. I appreciate you taking the time.").
+2. Then demonstrate the perfect opening approach for this scenario as {ai_role}.
+3. Keep it to 2-3 sentences total.
+START NOW."""
 
     else:
         # COACHING MODE: Supportive, empathetic practice (Default)
@@ -623,15 +626,16 @@ Response Guidelines:
 - Acknowledge Emotion: If the {role} is supportive, show that you feel supported. If they are firm, show understanding. 
 - Self-Defense & Boundaries: If the {role} is disrespectful, rude, or aggressive, you MUST immediately get defensive, push back, or shut down the conversation. Defend yourself fiercely as a real person would.
 - Stay in the Scenario: Ground all your responses in the specific context provided below.
-- Time Constraint: You only have 5 minutes for this conversation. Keep things moving naturally without stalling or wasting time.
+- Time Constraint: You only have 7 minutes for this conversation. Keep things moving naturally without stalling or wasting time.
 
 SCENARIO CONTEXT: {scenario}
 {character_instruction}
 {behavior_instruction}
 
 ### YOUR OPENING:
-1. Start the conversation IMMEDIATELY as {ai_role} by delivering the very first line of dialogue.
-2. Make it sound like you just walked into the room or picked up the phone.
+1. Start with a warm, respectful, and meaningful greeting as {ai_role} that puts the user at ease and builds their confidence to engage (e.g., "Hey, thanks for taking time from your schedule. I appreciate you being here.").
+2. Then transition naturally into the scenario context.
+3. Keep it to 2-3 sentences total. Make it sound like you just walked into the room.
 START NOW."""
 
     return [{"role": "system", "content": system}, {"role": "user", "content": '{"instruction": "Start coaching practice session"}'}]
@@ -884,7 +888,7 @@ Response Guidelines:
 - Self-Defense & Boundaries: If the user is disrespectful, condescending, or aggressive, you MUST explicitly get defensive, push back fiercely, or threaten to end the conversation depending on your specific character. Do not absorb abuse.
 - Stay in the Scenario: Speak strictly about the specific scenario context provided below and your frustrations or successes within it.
 - Encourage Flow: Where appropriate, ask follow-up questions to the {user_role} to keep the conversation flowing naturally.
-- Time Constraint: Be aware that you only have 5 minutes total for this conversation. If the user seems to be wrapping up, go along with it naturally.
+- Time Constraint: Be aware that you only have 7 minutes total for this conversation. If the user seems to be wrapping up, go along with it naturally.
 
 {char_logic}
 
@@ -1403,8 +1407,8 @@ def start_session():
         print(f"[INFO] Session created for user: {user_id}")
         user_email = getattr(user, 'email', None)
         
-        # Global limit: restrict all users to 9999 completed scenarios maximum
-        max_sessions = 9999
+        # Global limit: restrict all users to 3 completed scenarios maximum
+        max_sessions = 3
         try:
             user_sessions_data = get_user_sessions_from_db(user_id, limit=1, completed_only=True)
             total_sessions = user_sessions_data.get("total", 0)

@@ -577,6 +577,15 @@ def analyze_full_report_data(transcript, role, ai_role, scenario, framework=None
 {{
   "meta": {{ "scenario_id": "{scenario_type}", "outcome_status": "Completed/Incomplete", "overall_grade": "X/10", "summary": "Brief summary of the session." }},
   "type": "unified_report",
+  "conversation_snapshot": {{
+    "simulation_context": {{
+      "your_role": "The role the user played",
+      "ai_role": "The role the AI played",
+      "scenario_type": "Type of scenario",
+      "primary_skill_focus": "The main skill being assessed"
+    }},
+    "conversation_flow_overview": "A brief narrative of how the conversation progressed."
+  }},
   "executive_summary": {{
     "snapshot": "Overall performance highlight.", "final_score": "X/10", "strengths_summary": "Top strengths.", "improvements_summary": "Key growth areas.", "outcome_summary": "The ultimate result of the conversation."
   }},
@@ -619,9 +628,16 @@ def analyze_full_report_data(transcript, role, ai_role, scenario, framework=None
       "alternative_questions": [{{"question": "Better question", "rationale": "Why it works"}}]
     }}
   ],
-  "ideal_questions": ["High-impact question 1", "High-impact question 2"],
+  "ideal_questions": [
+    {{
+      "question": "High-impact question 1",
+      "definition": "Why this question is powerful",
+      "scoring": "10/10",
+      "impact": "The expected outcome or awareness shift it creates"
+    }}
+  ],
   "action_plan": {{
-    "specific_actions": ["Action 1"], "owner": "User", "timeline": "Next 30 days", "success_indicators": ["Indicator 1"]
+    "specific_actions": ["Action 1 (Do not write 'Owner' or 'User: ' - just write the action)"], "timeline": "Next 30 days", "success_indicators": ["Indicator 1"]
   }},
   "follow_up_strategy": {{
     "review_cadence": "Duration", "metrics_to_track": ["Metric 1"], "accountability_method": "Method"
@@ -2479,34 +2495,23 @@ class DashboardPDF(FPDF):
         ap = data.get('action_plan', {})
         if ap:
             block_title("Action Plan", PURPLE)
-            owner = sanitize_text(str(ap.get('owner', '')))
             timeline = sanitize_text(str(ap.get('timeline', '')))
 
-            # Two-column info boxes - tracked with a single start_y
+            # Single info box for timeline
             box_y = self.get_y()
             self.set_fill_color(245, 243, 255)
-            self.rect(10, box_y, 92, 14, 'F')
-            self.rect(108, box_y, 92, 14, 'F')
+            self.rect(10, box_y, 190, 14, 'F')
 
             self.set_xy(14, box_y + 2)
             self.set_font('helvetica', 'B', 8)
             self.set_text_color(*PURPLE)
-            self.cell(80, 5, "OWNER", 0, 1)
-            self.set_xy(14, self.get_y())
-            self.set_font('helvetica', '', 9)
-            self.set_text_color(*TEXT_MAIN)
-            self.cell(80, 5, owner, 0, 0)
-
-            self.set_xy(112, box_y + 2)
-            self.set_font('helvetica', 'B', 8)
-            self.set_text_color(*PURPLE)
             self.cell(80, 5, "TIMELINE", 0, 1)
-            self.set_xy(112, self.get_y())
+            self.set_xy(14, self.get_y())
             self.set_font('helvetica', '', 9)
             self.set_text_color(*TEXT_MAIN)
             self.cell(80, 5, timeline, 0, 0)
 
-            # Move cursor past the boxes
+            # Move cursor past the box
             actual_tmp = self.get_y()
             if actual_tmp < box_y: self.set_y(actual_tmp + 5)
             else: self.set_y(box_y + 18)

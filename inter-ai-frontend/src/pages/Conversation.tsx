@@ -135,10 +135,10 @@ export default function Conversation() {
         const timer = setInterval(() => {
             setState(prev => {
                 const newSecs = prev.elapsedSeconds + 1
-                // Show warning exactly at 4 minutes
-                if (newSecs === 240) {
-                    setTimeout(() => toast.warning("1 Minute Remaining", {
-                        description: "This conversation is limited to 5 minutes. Please wrap up your thoughts.",
+                // Show warning at 5 minutes (2 minutes remaining)
+                if (newSecs === 300) {
+                    setTimeout(() => toast.warning("2 Minutes Remaining", {
+                        description: "This conversation is limited to 7 minutes. Please wrap up your thoughts.",
                         duration: 5000
                     }), 0)
                 }
@@ -148,11 +148,11 @@ export default function Conversation() {
         return () => clearInterval(timer)
     }, [])
 
-    // Second effect to auto-end session at 5 minutes
+    // Second effect to auto-end session at 7 minutes
     useEffect(() => {
-        if (state.elapsedSeconds >= 300 && !isEnding && !sessionEndedRef.current) {
+        if (state.elapsedSeconds >= 420 && !isEnding && !sessionEndedRef.current) {
             toast.error("Time Limit Reached", {
-                description: "The 5-minute conversation limit has been reached."
+                description: "The 7-minute conversation limit has been reached."
             })
             handleEndConversation()
         }
@@ -275,7 +275,7 @@ export default function Conversation() {
                 ? sessionData.transcript
                 : [{
                     role: "assistant",
-                    content: `Hi! I'm your AI coach. Today we'll practice: ${sessionData.scenario}. I'll play the role of ${sessionData.ai_role} to give you realistic practice, and I'll offer coaching tips along the way. Ready when you are!`
+                    content: `Thank you for joining this session — I'm glad you're here. Today we'll be working through a conversation where I'll play the role of ${sessionData.ai_role}, and you'll step into the role of ${sessionData.role}. Take your time, there's no pressure — this is your space to practice and grow. Whenever you're ready, go ahead and start.`
                 }]
 
             setState((prev) => ({

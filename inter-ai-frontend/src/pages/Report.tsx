@@ -111,7 +111,6 @@ interface DeepDiveItem {
 
 interface ActionPlan {
     specific_actions: string[];
-    owner: string;
     timeline: string;
     success_indicators: string[];
 }
@@ -142,9 +141,7 @@ interface SimulationReportData extends GenericReportData {
     pattern_summary?: string;
     turning_points?: { point: string; timestamp: string }[];
     coaching_style?: { primary_style: string; description: string };
-    heat_map?: { dimension: string; score: number }[];
-    ideal_questions?: string[];
-    mentorship_observations?: MentorshipObservation[];
+    ideal_questions?: { question: string; definition: string; scoring: string; impact: string }[];
     learning_takeaways?: string[];
     reflection_prompts?: string[];
     speech_analysis?: {
@@ -543,7 +540,7 @@ const ComparisonBanner = ({ comparison }: { comparison: ComparisonData }) => {
                     </div>
                     <div>
                         <h3 className={`font-bold text-lg ${isImproved ? 'text-emerald-600 dark:text-emerald-400' : isDeclined ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                            {isImproved ? 'You Improved! 🎉' : isDeclined ? 'Room to Grow' : 'Same Level'}
+                            {isImproved ? 'You Improved! ðŸŽ‰' : isDeclined ? 'Room to Grow' : 'Same Level'}
                         </h3>
                         <p className="text-sm text-muted-foreground">
                             Compared to your previous attempt{prevDate ? ` on ${prevDate}` : ''}
@@ -581,7 +578,7 @@ const ComparisonBanner = ({ comparison }: { comparison: ComparisonData }) => {
                                 </div>
                                 <div className="flex items-center justify-center gap-1">
                                     <span className="text-xs text-muted-foreground">{d.previous}</span>
-                                    <span className="text-muted-foreground text-xs">→</span>
+                                    <span className="text-muted-foreground text-xs">â†’</span>
                                     <span className={`text-sm font-black ${improved ? 'text-emerald-500' : declined ? 'text-rose-500' : 'text-foreground'}`}>
                                         {d.current}
                                     </span>
@@ -641,91 +638,99 @@ const ScenarioContextSection = ({ scenario }: { scenario: string }) => {
     )
 }
 
-const EQAnalysisSection = ({ items }: { items?: { nuance: string; proof?: string; observation?: string; suggestion: string }[] }) => {
-    if (!items || items.length === 0) return null
+// --- CONVERSATION SNAPSHOT SECTION (shared by Assessment + Mentorship) ---
+const ConversationSnapshotSection = ({ data }: { data: any }) => {
+    const snap = data.conversation_snapshot as MentorshipConversationSnapshot | undefined
+    if (!snap) return null
     return (
-        <GlassCard>
-            <SectionHeader icon={Brain} title="Emotional Intelligence (EQ) & Nuance" colorClass="text-pink-500" bgClass="bg-pink-500/10" />
-            <div className="space-y-6">
-                {items.map((item, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-pink-500/5 border border-pink-500/10">
-                        <h3 className="font-bold text-lg text-pink-600 mb-2">{item.nuance}</h3>
-                        <div className="space-y-3">
-                            {(item.proof || item.observation) && (
-                                <div className="flex gap-2 text-sm text-foreground/80">
-                                    <span className="font-bold text-xs uppercase text-slate-500 mt-1">Proof:</span>
-                                    <span className="italic">"{(item.proof || item.observation)}"</span>
-                                </div>
-                            )}
-                            {item.suggestion && (
-                                <div className="flex gap-2 text-sm text-foreground/80">
-                                    <span className="font-bold text-xs uppercase text-slate-500 mt-1">Suggestion:</span>
-                                    <span>{item.suggestion}</span>
-                                </div>
-                            )}
+        <div className="space-y-6">
+            {snap.simulation_context && (
+                <GlassCard className="border-l-4 border-l-violet-500">
+                    <SectionHeader icon={Mic} title="Conversation Snapshot" colorClass="text-violet-500" bgClass="bg-violet-500/10" />
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-xl bg-violet-500/5 border border-violet-500/10">
+                            <span className="text-xs font-bold text-violet-600 uppercase tracking-widest block mb-1">Your Role</span>
+                            <p className="text-sm font-medium text-foreground">{snap.simulation_context.your_role}</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-violet-500/5 border border-violet-500/10">
+                            <span className="text-xs font-bold text-violet-600 uppercase tracking-widest block mb-1">AI Role</span>
+                            <p className="text-sm font-medium text-foreground">{snap.simulation_context.ai_role}</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                            <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-1">Scenario Type</span>
+                            <p className="text-sm font-medium text-foreground">{snap.simulation_context.scenario_type}</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+                            <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-1">Primary Skill Focus</span>
+                            <p className="text-sm font-bold text-indigo-600">{snap.simulation_context.primary_skill_focus}</p>
                         </div>
                     </div>
-                ))}
-            </div>
-        </GlassCard>
+                    {snap.conversation_flow_overview && (
+                        <div className="mt-4 p-4 rounded-xl bg-muted/30 border border-border/50">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Conversation Flow Overview</span>
+                            <p className="text-sm text-foreground/90 leading-relaxed">{snap.conversation_flow_overview}</p>
+                        </div>
+                    )}
+                </GlassCard>
+            )}
+            {!snap.simulation_context && snap.conversation_flow_overview && (
+                <GlassCard className="border-l-4 border-l-violet-500">
+                    <SectionHeader icon={Mic} title="Conversation Snapshot" colorClass="text-violet-500" bgClass="bg-violet-500/10" />
+                    <p className="text-base text-foreground/90 leading-relaxed">{snap.conversation_flow_overview}</p>
+                </GlassCard>
+            )}
+        </div>
     )
 }
 
-const BehaviourAnalysisSection = ({ items }: { items?: BehaviourItem[] }) => {
-    if (!items || items.length === 0) return null
+// --- IDEAL COACHING QUESTIONS SECTION (with definition + scoring + impact) ---
+const IdealCoachingQuestionsSection = ({ questions }: { questions?: { question: string; definition: string; scoring: string; impact: string }[] }) => {
+    if (!questions || questions.length === 0) return null
     return (
-        <GlassCard className="col-span-full">
-            <SectionHeader icon={Brain} title="Behavioral Analysis" colorClass="text-purple-500" bgClass="bg-purple-500/10" />
-            <div className="space-y-6">
-                {items.map((item, i) => (
-                    <div key={i} className="flex flex-col md:flex-row gap-6 p-6 rounded-xl bg-background border border-border hover:shadow-md transition-shadow">
-                        <div className="flex-1 space-y-3">
-                            <div className="flex items-center gap-3">
-                                <h3 className="font-bold text-lg text-foreground">{item.behavior}</h3>
-                                <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${item.impact.toLowerCase().includes('positive') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                    {item.impact}
+        <GlassCard className="border-l-4 border-l-indigo-500">
+            <SectionHeader icon={MessageSquare} title="Ideal Coaching Questions" colorClass="text-indigo-500" bgClass="bg-indigo-500/10" />
+            <div className="mb-5 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
+                <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-2">What Are Ideal Coaching Questions?</span>
+                <p className="text-sm text-foreground/80 leading-relaxed">
+                    Ideal coaching questions are purposefully crafted, open-ended prompts that guide the coachee to deeper self-reflection, unlock new perspectives, and drive meaningful action. They are non-judgmental, curiosity-driven, and timed to match the conversation's emotional and logical flow.
+                </p>
+            </div>
+            <div className="mb-4 flex items-center gap-3 text-xs font-bold uppercase tracking-widest">
+                <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">High Impact</span>
+                <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">Strategic</span>
+                <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-600 border border-blue-500/20">Coachee-Centered</span>
+            </div>
+            <ul className="space-y-4">
+                {questions.map((q, i) => (
+                    <li key={i} className="flex gap-4 p-4 rounded-xl bg-background border border-border hover:border-indigo-500/30 transition-colors">
+                        <div className="w-7 h-7 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center text-xs font-black shrink-0 mt-0.5 border border-indigo-500/20">{i + 1}</div>
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold text-foreground italic mb-3">"{q.question}"</p>
+                            <div className="grid sm:grid-cols-2 gap-4 mb-3">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">Definition</span>
+                                    <p className="text-xs text-foreground/90">{q.definition}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Impact</span>
+                                    <p className="text-xs text-foreground/90">{q.impact}</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 font-bold uppercase tracking-wide border border-amber-500/20">
+                                    Score: {q.scoring}
                                 </span>
                             </div>
-                            <p className="text-muted-foreground leading-relaxed">{item.insight}</p>
-                            {item.quote && (
-                                <div className="flex gap-3 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg border-l-4 border-primary/20 italic">
-                                    <Quote className="w-4 h-4 shrink-0 opacity-50" /> "{item.quote}"
-                                </div>
-                            )}
                         </div>
-                        {item.improved_approach && (
-                            <div className="md:w-1/3 bg-blue-500/5 border border-blue-500/10 p-5 rounded-lg">
-                                <h4 className="flex items-center gap-2 text-xs font-bold text-blue-500 uppercase tracking-wider mb-3">
-                                    <Lightbulb className="w-4 h-4" /> Try This Instead
-                                </h4>
-                                <p className="text-sm text-foreground/90 leading-relaxed font-medium">{item.improved_approach}</p>
-                            </div>
-                        )}
-                    </div>
+                    </li>
                 ))}
-            </div>
+            </ul>
         </GlassCard>
     )
 }
 
-const DetailedAnalysisSection = ({ items }: { items?: DetailedAnalysisItem[] | string }) => {
-    if (!items) return null
-    return (
-        <GlassCard>
-            <SectionHeader icon={BookOpen} title="Deep Dive Analysis" colorClass="text-indigo-500" bgClass="bg-indigo-500/10" />
-            <div className="space-y-6">
-                {Array.isArray(items) ? items.map((item, i) => (
-                    <div key={i} className="space-y-2">
-                        <h3 className="font-bold text-foreground border-l-4 border-indigo-500 pl-3">{item.topic}</h3>
-                        <p className="text-muted-foreground leading-relaxed pl-4">{item.analysis}</p>
-                    </div>
-                )) : (
-                    <p className="text-muted-foreground leading-relaxed">{items}</p>
-                )}
-            </div>
-        </GlassCard>
-    )
-}
+
+
 
 const SkillRadarChart = ({ items }: { items: { dimension: string; score: number | string }[] }) => {
     const data = items.map(item => ({
@@ -843,7 +848,7 @@ const QuestionsSection = ({ analysis }: { analysis?: QuestionAnalysis }) => {
                         </div>
                     )}
                     <div className="mt-3 text-xs text-muted-foreground">
-                        You asked {analysis.questions_asked_count} question{analysis.questions_asked_count !== 1 ? 's' : ''} • {analysis.questions_missed.length} key question{analysis.questions_missed.length !== 1 ? 's' : ''} missed
+                        You asked {analysis.questions_asked_count} question{analysis.questions_asked_count !== 1 ? 's' : ''} â€¢ {analysis.questions_missed.length} key question{analysis.questions_missed.length !== 1 ? 's' : ''} missed
                     </div>
                 </div>
             )}
@@ -992,40 +997,8 @@ const MentorshipReflectionView = ({ data }: { data: MentorshipReflectionData }) 
     return (
         <div className="space-y-8">
             {/* SECTION 1: Conversation Snapshot */}
-            {data.conversation_snapshot && (
-                <div className="space-y-6">
-                    {data.conversation_snapshot.simulation_context && (
-                        <GlassCard className="border-l-4 border-l-purple-500">
-                            <SectionHeader icon={Activity} title="Simulation Context" colorClass="text-purple-500" bgClass="bg-purple-500/10" />
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
-                                    <span className="text-xs font-bold text-purple-600 uppercase tracking-widest block mb-1">Your Role</span>
-                                    <p className="text-sm font-medium text-foreground">{data.conversation_snapshot.simulation_context.your_role}</p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
-                                    <span className="text-xs font-bold text-purple-600 uppercase tracking-widest block mb-1">AI Role</span>
-                                    <p className="text-sm font-medium text-foreground">{data.conversation_snapshot.simulation_context.ai_role}</p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
-                                    <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-1">Scenario Type</span>
-                                    <p className="text-sm font-medium text-foreground">{data.conversation_snapshot.simulation_context.scenario_type}</p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
-                                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-1">Primary Skill Focus</span>
-                                    <p className="text-sm font-medium text-indigo-600 font-bold">{data.conversation_snapshot.simulation_context.primary_skill_focus}</p>
-                                </div>
-                            </div>
-                        </GlassCard>
-                    )}
+            <ConversationSnapshotSection data={data} />
 
-                    {data.conversation_snapshot.conversation_flow_overview && (
-                        <GlassCard>
-                            <SectionHeader icon={BookOpen} title="Conversation Flow Overview" colorClass="text-blue-500" bgClass="bg-blue-500/10" />
-                            <p className="text-base text-foreground/90 leading-relaxed">{data.conversation_snapshot.conversation_flow_overview}</p>
-                        </GlassCard>
-                    )}
-                </div>
-            )}
 
             {/* Legacy executive summary for backward compat */}
             {!data.conversation_snapshot && data.executive_summary && (
@@ -1043,7 +1016,7 @@ const MentorshipReflectionView = ({ data }: { data: MentorshipReflectionData }) 
             {data.interaction_highlights && (
                 <div className="space-y-6">
                     <SectionHeader icon={Zap} title="Interaction Highlights" colorClass="text-emerald-500" bgClass="bg-emerald-500/10" />
-                    {data.interaction_highlights.note && data.interaction_highlights.note !== "This replaces scoring — structured observation of key patterns." && (
+                    {data.interaction_highlights.note && data.interaction_highlights.note !== "This replaces scoring â€” structured observation of key patterns." && (
                         <p className="text-sm text-muted-foreground -mt-4">{data.interaction_highlights.note}</p>
                     )}
                     <div className="grid lg:grid-cols-3 gap-6">
@@ -1173,7 +1146,7 @@ const MentorshipReflectionView = ({ data }: { data: MentorshipReflectionData }) 
             {data.example_phrases_demonstrated && data.example_phrases_demonstrated.length > 0 && (
                 <GlassCard>
                     <SectionHeader icon={Quote} title="Example Phrases Demonstrated by AI" colorClass="text-indigo-500" bgClass="bg-indigo-500/10" />
-                    <p className="text-sm text-muted-foreground mb-4 italic">Specific lines used during the conversation — your practical toolkit.</p>
+                    <p className="text-sm text-muted-foreground mb-4 italic">Specific lines used during the conversation â€” your practical toolkit.</p>
                     <div className="space-y-4">
                         {data.example_phrases_demonstrated.map((ep, i) => (
                             <div key={i} className="p-4 rounded-xl bg-background border border-indigo-500/10 shadow-sm">
@@ -1240,44 +1213,49 @@ const MentorshipReflectionView = ({ data }: { data: MentorshipReflectionData }) 
 
 
 const SimulationView = ({ data }: { data: SimulationReportData }) => {
-    const isMentorship = data.meta?.session_mode === 'mentorship'
-
     return (
         <div className="space-y-8">
-            {/* SECTION 1: Executive Summary */}
+
+            {/* SECTION 1: Conversation Snapshot */}
+            <ConversationSnapshotSection data={data} />
+
+            {/* SECTION 2: Executive Dashboard (NO scoring) */}
             {data.executive_summary && (
-                <div className={`grid ${isMentorship ? '' : 'lg:grid-cols-3'} gap-6`}>
-                    <GlassCard className={`${isMentorship ? '' : 'lg:col-span-2'} border-l-4 ${isMentorship ? 'border-l-purple-500' : 'border-l-primary'} flex flex-col justify-center`}>
-                        <SectionHeader icon={Activity} title={isMentorship ? "Mentorship Overview" : "Executive Dashboard"} colorClass={isMentorship ? "text-purple-500" : "text-primary"} bgClass={isMentorship ? "bg-purple-500/10" : "bg-primary/10"} />
-                        <p className="text-xl font-medium text-foreground/90 leading-relaxed mb-6">
-                            {data.executive_summary.snapshot}
-                        </p>
-                        <div className={`${isMentorship ? 'bg-purple-500/5 border-purple-500/10' : 'bg-primary/5 border-primary/10'} rounded-xl p-4 border`}>
-                            <span className={`text-xs font-bold ${isMentorship ? 'text-purple-500' : 'text-primary'} uppercase tracking-widest block mb-2`}>Outcome Summary</span>
-                            <p className="text-sm text-foreground/80">{data.executive_summary.outcome_summary}</p>
-                        </div>
-                    </GlassCard>
-                    {/* Hide Final Score card for mentorship */}
-                    {!isMentorship && (
-                        <GlassCard className="flex flex-col items-center justify-center text-center bg-gradient-to-b from-primary/10 to-transparent">
-                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">Final Score</span>
-                            <div className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-400 to-indigo-500">
-                                {data.executive_summary.final_score || data.meta.overall_grade}
+                <GlassCard className="border-l-4 border-l-primary">
+                    <SectionHeader icon={Activity} title="Executive Dashboard" colorClass="text-primary" bgClass="bg-primary/10" />
+                    <p className="text-xl font-medium text-foreground/90 leading-relaxed mb-6">{data.executive_summary.snapshot}</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        {data.executive_summary.outcome_summary && (
+                            <div className="bg-primary/5 border-primary/10 rounded-xl p-4 border">
+                                <span className="text-xs font-bold text-primary uppercase tracking-widest block mb-2">Outcome Summary</span>
+                                <p className="text-sm text-foreground/80">{data.executive_summary.outcome_summary}</p>
                             </div>
-                        </GlassCard>
-                    )}
-                </div>
+                        )}
+                        {data.executive_summary.strengths_summary && (
+                            <div className="bg-emerald-500/5 border-emerald-500/10 rounded-xl p-4 border">
+                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest block mb-2">Strengths Summary</span>
+                                <p className="text-sm text-foreground/80">{data.executive_summary.strengths_summary}</p>
+                            </div>
+                        )}
+                        {data.executive_summary.improvements_summary && (
+                            <div className="bg-amber-500/5 border-amber-500/10 rounded-xl p-4 border md:col-span-2">
+                                <span className="text-xs font-bold text-amber-600 uppercase tracking-widest block mb-2">Areas for Improvement</span>
+                                <p className="text-sm text-foreground/80">{data.executive_summary.improvements_summary}</p>
+                            </div>
+                        )}
+                    </div>
+                </GlassCard>
             )}
 
-            {/* NEW: COACHING STYLE PROFILE */}
+            {/* SECTION 3: Coaching Efficacy */}
             {data.coaching_style && (
-                <div className={`bg-gradient-to-r ${isMentorship ? 'from-purple-500/10 to-pink-500/5' : 'from-emerald-500/10 to-teal-500/5'} rounded-3xl p-1 shadow-sm`}>
+                <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/5 rounded-3xl p-1 shadow-sm">
                     <GlassCard className="border-none shadow-none m-0 bg-background/60 backdrop-blur-sm">
-                        <SectionHeader icon={Award} title={isMentorship ? "Mentorship Style" : "Coaching Style Profile"} colorClass={isMentorship ? "text-purple-500" : "text-emerald-500"} bgClass={isMentorship ? "bg-purple-500/10" : "bg-emerald-500/10"} />
+                        <SectionHeader icon={Award} title="Coaching Efficacy" colorClass="text-emerald-500" bgClass="bg-emerald-500/10" />
                         <div className="flex flex-col md:flex-row gap-6 items-center">
-                            <div className={`bg-background rounded-2xl p-6 border ${isMentorship ? 'border-purple-500/20' : 'border-emerald-500/20'} text-center md:w-1/3 shrink-0 shadow-sm`}>
+                            <div className="bg-background rounded-2xl p-6 border border-emerald-500/20 text-center md:w-1/3 shrink-0 shadow-sm">
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Primary Style</span>
-                                <div className={`text-2xl lg:text-3xl font-black ${isMentorship ? 'text-purple-500' : 'text-emerald-500'} uppercase tracking-wide`}>{data.coaching_style.primary_style}</div>
+                                <div className="text-2xl lg:text-3xl font-black text-emerald-500 uppercase tracking-wide">{data.coaching_style.primary_style}</div>
                             </div>
                             <p className="text-lg lg:text-xl text-foreground/90 leading-relaxed font-medium italic">"{data.coaching_style.description}"</p>
                         </div>
@@ -1285,316 +1263,200 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                 </div>
             )}
 
-            {/* MENTORSHIP-SPECIFIC SECTIONS */}
-            {isMentorship && data.mentorship_observations && data.mentorship_observations.length > 0 && (
-                <GlassCard className="border-l-4 border-l-purple-500">
-                    <SectionHeader icon={BookOpen} title="Mentorship Observations" colorClass="text-purple-500" bgClass="bg-purple-500/10" />
-                    <div className="space-y-6">
-                        {data.mentorship_observations.map((obs, i) => (
-                            <div key={i} className="p-5 rounded-xl bg-purple-500/5 border border-purple-500/10">
-                                <h3 className="font-bold text-lg text-purple-600 mb-3">{obs.observation}</h3>
-                                <div className="space-y-3">
-                                    {obs.evidence_quote && (
-                                        <div className="flex gap-3 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg border-l-4 border-purple-500/20 italic">
-                                            <Quote className="w-4 h-4 shrink-0 opacity-50" /> "{obs.evidence_quote}"
-                                        </div>
-                                    )}
-                                    <div className="flex gap-2 text-sm">
-                                        <span className="font-bold text-xs text-purple-600 uppercase tracking-wider shrink-0">Significance:</span>
-                                        <span className="text-foreground/80">{obs.significance}</span>
-                                    </div>
-                                    {obs.suggestion && (
-                                        <div className="flex gap-2 items-start mt-2 p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
-                                            <Lightbulb className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                                            <span className="text-sm text-foreground/90 font-medium">{obs.suggestion}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </GlassCard>
-            )}
-
-            {isMentorship && data.learning_takeaways && data.learning_takeaways.length > 0 && (
+            {/* SECTION 4: Heat Map + Skill Visualization */}
+            {data.heat_map && data.heat_map.length > 0 && (
                 <GlassCard>
-                    <SectionHeader icon={Zap} title="Key Learning Takeaways" colorClass="text-amber-500" bgClass="bg-amber-500/10" />
-                    <div className="space-y-3">
-                        {data.learning_takeaways.map((takeaway, i) => (
-                            <div key={i} className="flex gap-3 text-sm text-foreground/90 bg-amber-500/5 p-4 rounded-lg border border-amber-500/10">
-                                <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-600 flex items-center justify-center text-xs shrink-0 font-bold">{i + 1}</div>
-                                <span className="font-medium leading-relaxed">{takeaway}</span>
-                            </div>
-                        ))}
-                    </div>
-                </GlassCard>
-            )}
-
-            {isMentorship && data.reflection_prompts && data.reflection_prompts.length > 0 && (
-                <GlassCard className="bg-gradient-to-br from-indigo-500/5 to-purple-500/5">
-                    <SectionHeader icon={Brain} title="Reflection Prompts" colorClass="text-indigo-500" bgClass="bg-indigo-500/10" />
-                    <p className="text-sm text-muted-foreground mb-4">Take a moment to reflect on these questions to deepen your learning:</p>
-                    <div className="space-y-4">
-                        {data.reflection_prompts.map((prompt, i) => (
-                            <div key={i} className="p-4 rounded-xl bg-background border border-indigo-500/10 text-foreground/90 italic font-medium text-base leading-relaxed pl-5 border-l-4 border-l-indigo-500/40">
-                                "{prompt}"
-                            </div>
-                        ))}
-                    </div>
-                </GlassCard>
-            )}
-
-            <div className="grid lg:grid-cols-2 gap-8">
-                {/* SECTION 2: Goal Attainment — hide score for mentorship */}
-                {data.goal_attainment && (
-                    <GlassCard>
-                        <SectionHeader icon={Target} title="Goal Attainment" colorClass="text-blue-500" bgClass="bg-blue-500/10" />
-                        {!isMentorship && (
-                            <div className="flex items-center justify-between mb-6 pb-6 border-b border-border/50">
-                                <span className="text-lg font-bold text-foreground">Attainment Score</span>
-                                <span className="text-4xl font-black text-blue-500">{data.goal_attainment.score}</span>
-                            </div>
-                        )}
-                        <div className="space-y-6">
-                            <div>
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Expectation vs Reality</span>
-                                <p className="text-sm text-foreground/90 leading-relaxed">{data.goal_attainment.expectation_vs_reality}</p>
-                            </div>
-                            {data.goal_attainment.primary_gaps && data.goal_attainment.primary_gaps.length > 0 && (
-                                <div>
-                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Primary Gaps</span>
-                                    <ul className="space-y-2">
-                                        {data.goal_attainment.primary_gaps.map((gap, i) => (
-                                            <li key={i} className="flex gap-2 text-sm text-foreground/80">
-                                                <X className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" /> {gap}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            {data.goal_attainment.observation_focus && data.goal_attainment.observation_focus.length > 0 && (
-                                <div>
-                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Observation Focus</span>
-                                    <div className="flex flex-wrap gap-2">
-                                        {data.goal_attainment.observation_focus.map((focus, i) => (
-                                            <span key={i} className="px-2 py-1 bg-slate-500/10 text-slate-600 rounded text-xs font-medium border border-slate-500/20">{focus}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                    <SectionHeader icon={Activity} title="Competency Heat Map & Skill Visualization" colorClass="text-purple-500" bgClass="bg-purple-500/10" />
+                    <div className="grid lg:grid-cols-2 gap-8 items-center">
+                        <CompetencyHeatMap items={data.heat_map} />
+                        <div className="bg-muted/10 rounded-3xl p-4 border border-border/50">
+                            <SkillRadarChart items={data.heat_map} />
                         </div>
-                    </GlassCard>
-                )}
-
-                {/* NEW: Context and Questioning Analysis */}
-                {data.meta.scenario && <ScenarioContextSection scenario={data.meta.scenario} />}
-                {isMentorship && data.question_analysis && <QuestionsSection analysis={data.question_analysis} />}
-                {data.detailed_analysis && <DetailedAnalysisSection items={data.detailed_analysis} />}
-
-                {/* SCORECARD AND HEAT MAP — hidden for mentorship */}
-                {!isMentorship && (
-                    <div className="flex flex-col gap-8">
-                        {data.heat_map && data.heat_map.length > 0 && (
-                            <GlassCard>
-                                <SectionHeader icon={Activity} title="Competency Heat Map & Spider Graph" colorClass="text-purple-500" bgClass="bg-purple-500/10" />
-                                <div className="grid lg:grid-cols-2 gap-8 items-center">
-                                    <CompetencyHeatMap items={data.heat_map} />
-                                    <div className="bg-muted/10 rounded-3xl p-4 border border-border/50">
-                                        <SkillRadarChart items={data.heat_map} />
-                                    </div>
-                                </div>
-                            </GlassCard>
-                        )}
-                        {data.scorecard && (
-                            <ScorecardSection items={data.scorecard} />
-                        )}
                     </div>
-                )}
-            </div>
+                </GlassCard>
+            )}
 
-            {/* SPEECH ANALYSIS SECTION */}
-            {data.speech_analysis && data.speech_analysis.total_words && data.speech_analysis.total_words > 0 && (
-                <GlassCard className="border-l-4 border-l-cyan-500">
-                    <SectionHeader icon={Mic} title="Speech Analysis" colorClass="text-cyan-500" bgClass="bg-cyan-500/10" />
-                    <div className="grid sm:grid-cols-3 gap-6">
-                        {/* Filler Words */}
-                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
-                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Filler Words</span>
-                            <div className={`text-4xl font-black ${(data.speech_analysis.filler_ratio || 0) > 0.05 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                {data.speech_analysis.filler_count || 0}
+            {/* SECTION 5: Goal Attainment */}
+            {data.goal_attainment && (
+                <GlassCard>
+                    <SectionHeader icon={Target} title="Goal Attainment" colorClass="text-blue-500" bgClass="bg-blue-500/10" />
+                    <div className="space-y-6">
+                        <div>
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Expectation vs Reality</span>
+                            <p className="text-sm text-foreground/90 leading-relaxed">{data.goal_attainment.expectation_vs_reality}</p>
+                        </div>
+                        {data.goal_attainment.primary_gaps && data.goal_attainment.primary_gaps.length > 0 && (
+                            <div>
+                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Primary Gaps</span>
+                                <ul className="space-y-2">
+                                    {data.goal_attainment.primary_gaps.map((gap, i) => (
+                                        <li key={i} className="flex gap-2 text-sm text-foreground/80"><X className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />{gap}</li>
+                                    ))}
+                                </ul>
                             </div>
-                            <span className="text-xs text-muted-foreground mt-1 block">
-                                {((data.speech_analysis.filler_ratio || 0) * 100).toFixed(1)}% of words
-                            </span>
-                            {data.speech_analysis.filler_breakdown && Object.keys(data.speech_analysis.filler_breakdown).length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-3 justify-center">
-                                    {Object.entries(data.speech_analysis.filler_breakdown).map(([word, count]) => (
-                                        <span key={word} className="px-2 py-0.5 bg-background rounded-full text-[10px] font-medium border border-border">
-                                            {word}: {count}
-                                        </span>
+                        )}
+                        {data.goal_attainment.observation_focus && data.goal_attainment.observation_focus.length > 0 && (
+                            <div>
+                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Observation Focus</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {data.goal_attainment.observation_focus.map((focus, i) => (
+                                        <span key={i} className="px-2 py-1 bg-slate-500/10 text-slate-600 rounded text-xs font-medium border border-slate-500/20">{focus}</span>
                                     ))}
                                 </div>
-                            )}
-                        </div>
-
-                        {/* WPM */}
-                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
-                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Words Per Minute</span>
-                            {data.speech_analysis.wpm ? (
-                                <>
-                                    <div className={`text-4xl font-black ${
-                                        data.speech_analysis.wpm > 160 ? 'text-amber-500' :
-                                        data.speech_analysis.wpm < 100 ? 'text-rose-500' :
-                                        'text-emerald-500'
-                                    }`}>
-                                        {data.speech_analysis.wpm}
-                                    </div>
-                                    <span className={`text-xs font-bold mt-1 block ${
-                                        data.speech_analysis.wpm > 160 ? 'text-amber-500' :
-                                        data.speech_analysis.wpm < 100 ? 'text-rose-500' :
-                                        'text-emerald-500'
-                                    }`}>
-                                        {data.speech_analysis.wpm_label}
-                                    </span>
-                                    <div className="w-full h-2 bg-muted rounded-full mt-3 overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full transition-all duration-700 ${
-                                                data.speech_analysis.wpm > 160 ? 'bg-amber-500' :
-                                                data.speech_analysis.wpm < 100 ? 'bg-rose-500' :
-                                                'bg-emerald-500'
-                                            }`}
-                                            style={{ width: `${Math.min(100, (data.speech_analysis.wpm / 200) * 100)}%` }}
-                                        />
-                                    </div>
-                                    <span className="text-[10px] text-muted-foreground mt-1 block">Ideal: 100-160 WPM</span>
-                                </>
-                            ) : (
-                                <span className="text-sm text-muted-foreground">Duration data not available</span>
-                            )}
-                        </div>
-
-                        {/* Total Words */}
-                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
-                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Total Words</span>
-                            <div className="text-4xl font-black text-cyan-500">
-                                {data.speech_analysis.total_words}
                             </div>
-                            <span className="text-xs text-muted-foreground mt-1 block">spoken during session</span>
-                        </div>
+                        )}
                     </div>
                 </GlassCard>
             )}
 
-            {/* DEEP DIVE ANALYSIS */}
-            {data.deep_dive_analysis && data.deep_dive_analysis.length > 0 && (
+            {/* SECTION 6: Performance Scorecard */}
+            {data.scorecard && <ScorecardSection items={data.scorecard} />}
+
+            {/* SECTION 7: Deep Dive Analysis (Communication Style + Behaviour Analysis + Emotional Intelligence) */}
+            {(data.deep_dive_analysis?.length || data.behaviour_analysis?.length || data.eq_analysis?.length || data.pattern_summary) && (
                 <GlassCard>
                     <SectionHeader icon={BookOpen} title="Deep Dive Analysis" colorClass="text-indigo-500" bgClass="bg-indigo-500/10" />
-                    <div className="grid xl:grid-cols-2 gap-6">
-                        {data.deep_dive_analysis.map((item, i) => (
-                            <div key={i} className="bg-background rounded-xl p-5 border border-border shadow-sm">
-                                <h3 className="font-bold text-lg text-indigo-600 mb-4 pb-2 border-b border-indigo-500/10">{item.topic}</h3>
-                                <div className="space-y-3">
-                                    {item.tone && <div className="text-sm"><span className="font-bold text-muted-foreground">Tone:</span> <span className="text-foreground/90">{item.tone}</span></div>}
-                                    {item.language_impact && <div className="text-sm"><span className="font-bold text-muted-foreground">Language Impact:</span> <span className="text-foreground/90">{item.language_impact}</span></div>}
-                                    {item.comfort_level && <div className="text-sm"><span className="font-bold text-muted-foreground">Comfort Level:</span> <span className="text-foreground/90">{item.comfort_level}</span></div>}
-                                    {item.impact && <div className="text-sm"><span className="font-bold text-muted-foreground">Impact:</span> <span className="text-foreground/90">{item.impact}</span></div>}
-                                    {item.questions_asked && <div className="text-sm"><span className="font-bold text-muted-foreground">Questions:</span> <span className="text-foreground/90">{item.questions_asked}</span></div>}
-                                    {item.exploration && <div className="text-sm"><span className="font-bold text-muted-foreground">Exploration:</span> <span className="text-foreground/90">{item.exploration}</span></div>}
-                                    {item.understanding_depth && <div className="text-sm"><span className="font-bold text-muted-foreground">Understanding Depth:</span> <span className="text-foreground/90">{item.understanding_depth}</span></div>}
-                                    {item.analysis && <div className="text-sm text-foreground/90">{item.analysis}</div>}
+                    <div className="space-y-10">
+
+                        {/* i) Communication Style */}
+                        {data.deep_dive_analysis && data.deep_dive_analysis.length > 0 && (
+                            <div>
+                                <h3 className="text-sm font-black uppercase tracking-widest text-indigo-500 mb-4 flex items-center gap-2 pb-2 border-b border-indigo-500/10">
+                                    <MessageSquare className="w-4 h-4" /> i) Communication Style
+                                </h3>
+                                <div className="grid xl:grid-cols-2 gap-4">
+                                    {data.deep_dive_analysis.map((item, i) => (
+                                        <div key={i} className="bg-background rounded-xl p-5 border border-border shadow-sm">
+                                            <h4 className="font-bold text-base text-indigo-600 mb-3 pb-2 border-b border-indigo-500/10">{item.topic}</h4>
+                                            <div className="space-y-2 text-sm">
+                                                {item.tone && <div><span className="font-bold text-muted-foreground">Tone: </span><span className="text-foreground/90">{item.tone}</span></div>}
+                                                {item.language_impact && <div><span className="font-bold text-muted-foreground">Language Impact: </span><span className="text-foreground/90">{item.language_impact}</span></div>}
+                                                {item.comfort_level && <div><span className="font-bold text-muted-foreground">Comfort Level: </span><span className="text-foreground/90">{item.comfort_level}</span></div>}
+                                                {item.impact && <div><span className="font-bold text-muted-foreground">Impact: </span><span className="text-foreground/90">{item.impact}</span></div>}
+                                                {item.questions_asked && <div><span className="font-bold text-muted-foreground">Questions: </span><span className="text-foreground/90">{item.questions_asked}</span></div>}
+                                                {item.exploration && <div><span className="font-bold text-muted-foreground">Exploration: </span><span className="text-foreground/90">{item.exploration}</span></div>}
+                                                {item.understanding_depth && <div><span className="font-bold text-muted-foreground">Understanding Depth: </span><span className="text-foreground/90">{item.understanding_depth}</span></div>}
+                                                {item.analysis && <div className="text-foreground/90">{item.analysis}</div>}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        ))}
+                        )}
+
+                        {/* ii) Behaviour Analysis */}
+                        {(data.behaviour_analysis?.length || data.pattern_summary) && (
+                            <div>
+                                <h3 className="text-sm font-black uppercase tracking-widest text-purple-500 mb-4 flex items-center gap-2 pb-2 border-b border-purple-500/10">
+                                    <Brain className="w-4 h-4" /> ii) Behaviour Analysis
+                                </h3>
+                                {data.behaviour_analysis && data.behaviour_analysis.length > 0 && (
+                                    <div className="space-y-4">
+                                        {data.behaviour_analysis.map((item, i) => (
+                                            <div key={i} className="flex flex-col md:flex-row gap-6 p-5 rounded-xl bg-background border border-border hover:shadow-md transition-shadow">
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <h4 className="font-bold text-base text-foreground">{item.behavior}</h4>
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${item.impact.toLowerCase().includes('positive') ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{item.impact}</span>
+                                                    </div>
+                                                    <p className="text-muted-foreground leading-relaxed">{item.insight}</p>
+                                                    {item.quote && (
+                                                        <div className="flex gap-3 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg border-l-4 border-primary/20 italic">
+                                                            <Quote className="w-4 h-4 shrink-0 opacity-50" /> "{item.quote}"
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {item.improved_approach && (
+                                                    <div className="md:w-1/3 bg-blue-500/5 border border-blue-500/10 p-4 rounded-lg">
+                                                        <h5 className="flex items-center gap-2 text-xs font-bold text-blue-500 uppercase tracking-wider mb-2"><Lightbulb className="w-4 h-4" /> Try This Instead</h5>
+                                                        <p className="text-sm text-foreground/90 leading-relaxed font-medium">{item.improved_approach}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* iii) Emotional Intelligence */}
+                        {data.eq_analysis && data.eq_analysis.length > 0 && (
+                            <div>
+                                <h3 className="text-sm font-black uppercase tracking-widest text-pink-500 mb-4 flex items-center gap-2 pb-2 border-b border-pink-500/10">
+                                    <Brain className="w-4 h-4" /> iii) Emotional Intelligence
+                                </h3>
+                                <div className="space-y-4">
+                                    {data.eq_analysis.map((item, i) => (
+                                        <div key={i} className="p-4 rounded-xl bg-pink-500/5 border border-pink-500/10">
+                                            <h4 className="font-bold text-base text-pink-600 mb-2">{item.nuance}</h4>
+                                            {(item.proof || item.observation) && (
+                                                <div className="flex gap-2 text-sm text-foreground/80 mb-2">
+                                                    <span className="font-bold text-xs uppercase text-slate-500 mt-1">Proof:</span>
+                                                    <span className="italic">"{item.proof || item.observation}"</span>
+                                                </div>
+                                            )}
+                                            {item.suggestion && (
+                                                <div className="flex gap-2 text-sm text-foreground/80">
+                                                    <span className="font-bold text-xs uppercase text-slate-500 mt-1">Suggestion:</span>
+                                                    <span>{item.suggestion}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </GlassCard>
             )}
 
-            {/* BEHAVIOURAL & EQ */}
-            {data.pattern_summary && (
-                <GlassCard className="border-l-4 border-l-blue-500 shadow-md">
-                    <SectionHeader icon={Brain} title="Behavioural Pattern Summary" colorClass="text-blue-500" bgClass="bg-blue-500/10" />
-                    <p className="text-xl font-medium leading-relaxed text-foreground/90">{data.pattern_summary}</p>
-                </GlassCard>
-            )}
-
-            <div className="grid lg:grid-cols-2 gap-8">
-                <div className="space-y-8 flex flex-col">
-                    {data.eq_analysis && <EQAnalysisSection items={data.eq_analysis} />}
-                    {data.turning_points && data.turning_points.length > 0 && (
+            {/* SECTION 8: Strengths & Missed Opportunities */}
+            {((data.strengths_and_improvements?.strengths?.length || 0) > 0 || (data.strengths_and_improvements?.missed_opportunities?.length || data.missed_opportunities?.length || 0) > 0) && (
+                <div className="grid lg:grid-cols-2 gap-6">
+                    {(data.strengths_and_improvements?.strengths || []).length > 0 && (
                         <GlassCard>
-                            <SectionHeader icon={History} title="Turning Points Detected" colorClass="text-amber-500" bgClass="bg-amber-500/10" />
-                            <div className="space-y-4">
-                                {data.turning_points.map((tp, i) => (
-                                    <div key={i} className="flex flex-col gap-2 p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 shadow-sm">
-                                        <span className="text-xs font-bold text-amber-600 uppercase tracking-widest">{tp.timestamp}</span>
-                                        <p className="text-sm text-foreground/90 leading-relaxed font-medium">{tp.point}</p>
-                                    </div>
+                            <SectionHeader icon={CheckCircle2} title="Key Strengths" colorClass="text-emerald-500" bgClass="bg-emerald-500/10" />
+                            <ul className="space-y-3">
+                                {(data.strengths_and_improvements?.strengths || []).map((s, i) => (
+                                    <li key={i} className="flex gap-3 text-sm text-foreground/90 bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10">
+                                        <Check className="w-4 h-4 text-emerald-500 mt-0.5" /> {s}
+                                    </li>
                                 ))}
-                            </div>
+                            </ul>
+                        </GlassCard>
+                    )}
+                    {((data.strengths_and_improvements?.missed_opportunities || []).length > 0 || (data.missed_opportunities || []).length > 0) && (
+                        <GlassCard>
+                            <SectionHeader icon={AlertTriangle} title="Missed Opportunities" colorClass="text-amber-500" bgClass="bg-amber-500/10" />
+                            <ul className="space-y-3">
+                                {(data.strengths_and_improvements?.missed_opportunities || data.missed_opportunities || []).map((s, i) => (
+                                    <li key={i} className="flex gap-3 text-sm text-foreground/90 bg-amber-500/5 p-3 rounded-lg border border-amber-500/10">
+                                        <X className="w-4 h-4 text-amber-500 mt-0.5" /> {s}
+                                    </li>
+                                ))}
+                            </ul>
                         </GlassCard>
                     )}
                 </div>
-                <div className="space-y-8 flex flex-col">
-                    {data.behaviour_analysis && <BehaviourAnalysisSection items={data.behaviour_analysis} />}
-                </div>
-            </div>
+            )}
 
-            {/* STRENGTHS & MISSED OPPORTUNITIES */}
-            <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6">
-                {(data.strengths_and_improvements?.strengths || []).length > 0 && (
-                    <GlassCard>
-                        <SectionHeader icon={CheckCircle2} title="Key Strengths" colorClass="text-emerald-500" bgClass="bg-emerald-500/10" />
-                        <ul className="space-y-3">
-                            {(data.strengths_and_improvements?.strengths || []).map((s, i) => (
-                                <li key={i} className="flex gap-3 text-sm text-foreground/90 bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10">
-                                    <Check className="w-4 h-4 text-emerald-500 mt-0.5" /> {s}
-                                </li>
-                            ))}
-                        </ul>
-                    </GlassCard>
-                )}
+            {/* SECTION 9: Ideal Coaching Questions (definition + scoring + impact) */}
+            <IdealCoachingQuestionsSection questions={data.ideal_questions} />
 
-                {((data.strengths_and_improvements?.missed_opportunities || []).length > 0 || (data.missed_opportunities || []).length > 0) && (
-                    <GlassCard>
-                        <SectionHeader icon={AlertTriangle} title={isMentorship ? "Growth Areas" : "Missed Opportunities"} colorClass="text-amber-500" bgClass="bg-amber-500/10" />
-                        <ul className="space-y-3">
-                            {(data.strengths_and_improvements?.missed_opportunities || data.missed_opportunities || []).map((s, i) => (
-                                <li key={i} className="flex gap-3 text-sm text-foreground/90 bg-amber-500/5 p-3 rounded-lg border border-amber-500/10">
-                                    <X className="w-4 h-4 text-amber-500 mt-0.5" /> {s}
-                                </li>
-                            ))}
-                        </ul>
-                    </GlassCard>
-                )}
+            {/* Enhanced question analysis if present */}
+            {data.question_analysis && <QuestionsSection analysis={data.question_analysis} />}
 
-                {data.ideal_questions && data.ideal_questions.length > 0 && (
-                    <GlassCard className="lg:col-span-1 md:col-span-2">
-                        <SectionHeader icon={MessageSquare} title="Ideal Coaching Questions" colorClass="text-indigo-500" bgClass="bg-indigo-500/10" />
-                        <ul className="space-y-4">
-                            {data.ideal_questions.map((q, i) => (
-                                <li key={i} className="text-sm font-medium text-foreground/80 italic pl-4 border-l-2 border-indigo-500/40">"{q}"</li>
-                            ))}
-                        </ul>
-                    </GlassCard>
-                )}
-            </div>
-
-            {/* ACTION PLAN & FOLLOW UP */}
+            {/* SECTION 10: Action Plan â€” Improve (no owner) */}
             <div className="grid lg:grid-cols-2 gap-6">
                 {data.action_plan && (
                     <GlassCard className="border-t-4 border-t-purple-500">
-                        <SectionHeader icon={Activity} title="Action Plan" colorClass="text-purple-500" bgClass="bg-purple-500/10" />
+                        <SectionHeader icon={Activity} title="Action Plan â€” Improve" colorClass="text-purple-500" bgClass="bg-purple-500/10" />
                         <div className="space-y-4 mb-6 text-sm">
-                            <div className="flex justify-between bg-purple-500/5 p-3 rounded-lg border border-purple-500/10">
-                                <span className="font-bold text-purple-600">Owner</span>
-                                <span className="font-medium">{data.action_plan.owner}</span>
-                            </div>
                             <div className="flex justify-between bg-purple-500/5 p-3 rounded-lg border border-purple-500/10">
                                 <span className="font-bold text-purple-600">Timeline</span>
                                 <span className="font-medium">{data.action_plan.timeline}</span>
                             </div>
                         </div>
-
                         <div className="space-y-4">
                             <div>
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Specific Actions</span>
@@ -1607,7 +1469,6 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                                     ))}
                                 </ul>
                             </div>
-
                             {data.action_plan.success_indicators && data.action_plan.success_indicators.length > 0 && (
                                 <div className="pt-4 border-t border-border/50">
                                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Success Indicators</span>
@@ -1630,20 +1491,18 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                                 <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-1">Review Cadence</span>
                                 <p className="font-medium text-foreground">{data.follow_up_strategy.review_cadence}</p>
                             </div>
-
                             {data.follow_up_strategy.metrics_to_track && data.follow_up_strategy.metrics_to_track.length > 0 && (
                                 <div>
                                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Metrics to Track</span>
                                     <div className="flex flex-col gap-2">
                                         {data.follow_up_strategy.metrics_to_track.map((metric, i) => (
                                             <div key={i} className="p-3 bg-background rounded-lg border border-border text-sm flex items-center gap-3 shadow-sm">
-                                                <BarChart className="w-4 h-4 text-blue-500 shrink-0" /> <span className="font-medium text-foreground/90">{metric}</span>
+                                                <BarChart className="w-4 h-4 text-blue-500 shrink-0" /><span className="font-medium text-foreground/90">{metric}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
-
                             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-border shadow-sm">
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-1">Accountability Method</span>
                                 <p className="text-sm text-foreground/90 font-medium leading-relaxed">{data.follow_up_strategy.accountability_method}</p>
@@ -1653,7 +1512,49 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                 )}
             </div>
 
-            {/* FINAL EVALUATION */}
+            {/* Scenario Context (supplemental) */}
+            {data.meta.scenario && <ScenarioContextSection scenario={data.meta.scenario} />}
+
+            {/* Speech Analysis */}
+            {data.speech_analysis && data.speech_analysis.total_words && data.speech_analysis.total_words > 0 && (
+                <GlassCard className="border-l-4 border-l-cyan-500">
+                    <SectionHeader icon={Mic} title="Speech Analysis" colorClass="text-cyan-500" bgClass="bg-cyan-500/10" />
+                    <div className="grid sm:grid-cols-3 gap-6">
+                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Filler Words</span>
+                            <div className={`text-4xl font-black ${(data.speech_analysis.filler_ratio || 0) > 0.05 ? 'text-amber-500' : 'text-emerald-500'}`}>{data.speech_analysis.filler_count || 0}</div>
+                            <span className="text-xs text-muted-foreground mt-1 block">{((data.speech_analysis.filler_ratio || 0) * 100).toFixed(1)}% of words</span>
+                            {data.speech_analysis.filler_breakdown && Object.keys(data.speech_analysis.filler_breakdown).length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-3 justify-center">
+                                    {Object.entries(data.speech_analysis.filler_breakdown).map(([word, count]) => (
+                                        <span key={word} className="px-2 py-0.5 bg-background rounded-full text-[10px] font-medium border border-border">{word}: {count}</span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Words Per Minute</span>
+                            {data.speech_analysis.wpm ? (
+                                <>
+                                    <div className={`text-4xl font-black ${data.speech_analysis.wpm > 160 ? 'text-amber-500' : data.speech_analysis.wpm < 100 ? 'text-rose-500' : 'text-emerald-500'}`}>{data.speech_analysis.wpm}</div>
+                                    <span className={`text-xs font-bold mt-1 block ${data.speech_analysis.wpm > 160 ? 'text-amber-500' : data.speech_analysis.wpm < 100 ? 'text-rose-500' : 'text-emerald-500'}`}>{data.speech_analysis.wpm_label}</span>
+                                    <div className="w-full h-2 bg-muted rounded-full mt-3 overflow-hidden">
+                                        <div className={`h-full rounded-full transition-all duration-700 ${data.speech_analysis.wpm > 160 ? 'bg-amber-500' : data.speech_analysis.wpm < 100 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, (data.speech_analysis.wpm / 200) * 100)}%` }} />
+                                    </div>
+                                    <span className="text-[10px] text-muted-foreground mt-1 block">Ideal: 100-160 WPM</span>
+                                </>
+                            ) : <span className="text-sm text-muted-foreground">Duration data not available</span>}
+                        </div>
+                        <div className="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/10 text-center">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest block mb-2">Total Words</span>
+                            <div className="text-4xl font-black text-cyan-500">{data.speech_analysis.total_words}</div>
+                            <span className="text-xs text-muted-foreground mt-1 block">spoken during session</span>
+                        </div>
+                    </div>
+                </GlassCard>
+            )}
+
+            {/* Final Evaluation */}
             {data.final_evaluation && (
                 <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent p-1 rounded-3xl mt-4">
                     <div className="bg-card rounded-[22px] p-6 lg:p-8 border border-indigo-500/20 shadow-sm">
@@ -1661,23 +1562,15 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                             <div>
                                 <div className="flex items-center gap-3 mb-4">
                                     <Flag className="w-8 h-8 text-indigo-500" />
-                                    <h2 className="text-2xl font-black text-foreground uppercase tracking-wide">{isMentorship ? 'Growth Assessment' : 'Final Evaluation'}</h2>
+                                    <h2 className="text-2xl font-black text-foreground uppercase tracking-wide">Final Evaluation</h2>
                                 </div>
-                                <p className="text-muted-foreground max-w-2xl text-lg">{isMentorship ? 'Growth journey assessment and development pathway.' : 'Readiness assessment and long-term development pathway.'}</p>
+                                <p className="text-muted-foreground max-w-2xl text-lg">Readiness assessment and long-term development pathway.</p>
                             </div>
                             <div className="flex gap-4 self-stretch md:self-auto">
-                                {/* Hide numerical maturity rating for mentorship */}
-                                {!isMentorship && data.final_evaluation.maturity_rating && (
+                                {data.final_evaluation.maturity_rating && (
                                     <div className="bg-indigo-500/10 px-6 py-4 rounded-2xl border border-indigo-500/20 text-center flex-1">
                                         <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-1 whitespace-nowrap">Maturity Rating</span>
                                         <span className="text-3xl font-black text-indigo-500">{data.final_evaluation.maturity_rating}</span>
-                                    </div>
-                                )}
-                                {/* For mentorship, show descriptive maturity text */}
-                                {isMentorship && data.final_evaluation.maturity_rating && (
-                                    <div className="bg-purple-500/10 px-6 py-4 rounded-2xl border border-purple-500/20 text-center flex-1">
-                                        <span className="text-xs font-bold text-purple-600 uppercase tracking-widest block mb-1 whitespace-nowrap">Growth Stage</span>
-                                        <span className="text-lg font-black text-purple-500">{data.final_evaluation.maturity_rating}</span>
                                     </div>
                                 )}
                                 {data.final_evaluation.readiness_level && (
@@ -1688,7 +1581,6 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                                 )}
                             </div>
                         </div>
-
                         <div className="grid md:grid-cols-2 gap-8">
                             {data.final_evaluation.immediate_focus && data.final_evaluation.immediate_focus.length > 0 && (
                                 <div>
@@ -1698,7 +1590,7 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                                     <ul className="space-y-3">
                                         {data.final_evaluation.immediate_focus.map((focus, i) => (
                                             <li key={i} className="flex gap-3 p-3 bg-background border border-border rounded-xl text-sm font-medium shadow-sm">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" /> <span className="text-foreground/90">{focus}</span>
+                                                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" /><span className="text-foreground/90">{focus}</span>
                                             </li>
                                         ))}
                                     </ul>
@@ -1719,3 +1611,4 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
         </div>
     )
 }
+
