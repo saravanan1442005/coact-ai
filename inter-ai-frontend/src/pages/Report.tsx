@@ -1313,8 +1313,8 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                 </div>
             )}
 
-            {/* 10) IDEAL Coaching Questions (definition + scoring + impact) */}
-            <IdealCoachingQuestionsSection questions={data.deal_coaching_questions || data.ideal_questions} />
+            {/* 10) IDEAL Coaching Questions (definition + scoring + impact) - REMOVED */}
+            {/* <IdealCoachingQuestionsSection questions={data.deal_coaching_questions || data.ideal_questions} /> */}
 
             {/* 11) Action Plan Improve */}
             {data.action_plan && (
