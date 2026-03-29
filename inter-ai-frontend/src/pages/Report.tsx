@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { Download, AlertCircle, Target, History, Zap, Award, BookOpen, MessageSquare, ChevronRight, Check, X, AlertTriangle, ArrowLeft, ArrowRight, Clock, CheckCircle2, Brain, Quote, Lightbulb, Activity, Mic, TrendingUp } from "lucide-react"
+import { Download, AlertCircle, Target, History, Zap, Award, BookOpen, MessageSquare, ChevronRight, Check, X, ArrowLeft, ArrowRight, Clock, CheckCircle2, Brain, Quote, Lightbulb, Activity, Mic, TrendingUp } from "lucide-react"
 import { motion, Variants } from "framer-motion"
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts"
 
@@ -1283,38 +1283,24 @@ const SimulationView = ({ data }: { data: SimulationReportData }) => {
                 </GlassCard>
             )}
 
-            {/* 9) Strengths & Missed Opportunities */}
-            {((data.strengths_and_improvements?.strengths?.length || 0) > 0 || (data.strengths_and_improvements?.missed_opportunities?.length || data.missed_opportunities?.length || 0) > 0) && (
-                <div className="grid lg:grid-cols-2 gap-6">
-                    {(data.strengths_and_improvements?.strengths || []).length > 0 && (
-                        <GlassCard>
-                            <SectionHeader icon={CheckCircle2} title="Key Strengths" colorClass="text-emerald-500" bgClass="bg-emerald-500/10" />
-                            <ul className="space-y-3">
-                                {(data.strengths_and_improvements?.strengths || []).map((s, i) => (
-                                    <li key={i} className="flex gap-3 text-sm text-foreground/90 bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10">
-                                        <Check className="w-4 h-4 text-emerald-500 mt-0.5" /> {s}
-                                    </li>
-                                ))}
-                            </ul>
-                        </GlassCard>
-                    )}
-                    {((data.strengths_and_improvements?.missed_opportunities || []).length > 0 || (data.missed_opportunities || []).length > 0) && (
-                        <GlassCard>
-                            <SectionHeader icon={AlertTriangle} title="Missed Opportunities" colorClass="text-amber-500" bgClass="bg-amber-500/10" />
-                            <ul className="space-y-3">
-                                {(data.strengths_and_improvements?.missed_opportunities || data.missed_opportunities || []).map((s, i) => (
-                                    <li key={i} className="flex gap-3 text-sm text-foreground/90 bg-amber-500/5 p-3 rounded-lg border border-amber-500/10">
-                                        <X className="w-4 h-4 text-amber-500 mt-0.5" /> {s}
-                                    </li>
-                                ))}
-                            </ul>
-                        </GlassCard>
-                    )}
+            {/* 9) Strengths only (removed Missed Opportunities) */}
+            {(data.strengths_and_improvements?.strengths?.length || 0) > 0 && (
+                <div>
+                    <GlassCard>
+                        <SectionHeader icon={CheckCircle2} title="Key Strengths" colorClass="text-emerald-500" bgClass="bg-emerald-500/10" />
+                        <ul className="space-y-3">
+                            {(data.strengths_and_improvements?.strengths || []).map((s, i) => (
+                                <li key={i} className="flex gap-3 text-sm text-foreground/90 bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10">
+                                    <Check className="w-4 h-4 text-emerald-500 mt-0.5" /> {s}
+                                </li>
+                            ))}
+                        </ul>
+                    </GlassCard>
                 </div>
             )}
 
-            {/* 10) IDEAL Coaching Questions (definition + scoring + impact) - REMOVED */}
-            {/* <IdealCoachingQuestionsSection questions={data.deal_coaching_questions || data.ideal_questions} /> */}
+            {/* 10) IDEAL Coaching Questions (definition + scoring + impact) */}
+            <IdealCoachingQuestionsSection questions={data.deal_coaching_questions || data.ideal_questions} />
 
             {/* 11) Action Plan Improve */}
             {data.action_plan && (
