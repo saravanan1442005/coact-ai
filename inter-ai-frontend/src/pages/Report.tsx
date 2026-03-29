@@ -541,7 +541,7 @@ const ComparisonBanner = ({ comparison }: { comparison: ComparisonData }) => {
                     </div>
                     <div>
                         <h3 className={`font-bold text-lg ${isImproved ? 'text-emerald-600 dark:text-emerald-400' : isDeclined ? 'text-rose-600 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                            {isImproved ? 'You Improved! ðŸŽ‰' : isDeclined ? 'Room to Grow' : 'Same Level'}
+                            {isImproved ? 'You Improved! 🎉' : isDeclined ? 'Room to Grow' : 'Same Level'}
                         </h3>
                         <p className="text-sm text-muted-foreground">
                             Compared to your previous attempt{prevDate ? ` on ${prevDate}` : ''}
@@ -579,7 +579,7 @@ const ComparisonBanner = ({ comparison }: { comparison: ComparisonData }) => {
                                 </div>
                                 <div className="flex items-center justify-center gap-1">
                                     <span className="text-xs text-muted-foreground">{d.previous}</span>
-                                    <span className="text-muted-foreground text-xs">â†’</span>
+                                    <span className="text-muted-foreground text-xs">→</span>
                                     <span className={`text-sm font-black ${improved ? 'text-emerald-500' : declined ? 'text-rose-500' : 'text-foreground'}`}>
                                         {d.current}
                                     </span>
