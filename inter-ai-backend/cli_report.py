@@ -554,7 +554,7 @@ def analyze_full_report_data(transcript, role, ai_role, scenario, framework=None
     # =====================================================================
     is_mentorship = (session_mode == "mentorship" or mode == "mentorship")
     
-    if is_mentorship:
+    if False:
         from mentorship_report import analyze_mentorship_report_data
         return analyze_mentorship_report_data(
             transcript, role, ai_role, scenario,
@@ -2142,7 +2142,14 @@ class DashboardPDF(FPDF):
             self.ln(3)
 
         # ─────────────────────────────────────────────────────────────
-        # 1. EXECUTIVE DASHBOARD
+        # 1. CONVERSATION SNAPSHOT
+        # ─────────────────────────────────────────────────────────────
+        if data.get('meta', {}).get('scenario'):
+            self.draw_context_summary()
+            divider()
+
+        # ─────────────────────────────────────────────────────────────
+        # 2. EXECUTIVE DASHBOARD
         # ─────────────────────────────────────────────────────────────
         es = data.get('executive_summary', {})
         if es:
@@ -2173,11 +2180,11 @@ class DashboardPDF(FPDF):
             divider()
 
         # ─────────────────────────────────────────────────────────────
-        # 2. COACHING STYLE PROFILE
+        # 3. COACHING EFFICACY
         # ─────────────────────────────────────────────────────────────
         cs = data.get('coaching_style', {})
         if cs:
-            block_title("Coaching Style Profile", EMERALD)
+            block_title("Coaching Efficacy", EMERALD)
             self.set_x(15)
             self.set_font('helvetica', 'B', 13)
             self.set_text_color(*EMERALD)
@@ -2189,7 +2196,51 @@ class DashboardPDF(FPDF):
             divider()
 
         # ─────────────────────────────────────────────────────────────
-        # 3. GOAL ATTAINMENT
+        # 4. COMPETENCY HEAT MAP
+        # ─────────────────────────────────────────────────────────────
+        heat_map = data.get('heat_map', [])
+        if heat_map:
+            block_title("Competency Heat Map", PURPLE)
+            for item in heat_map:
+                self.check_space(10)
+                dim = sanitize_text(str(item.get('dimension', '')))
+                score_val = self._extract_score_value(str(item.get('score', 0)))
+
+                self.set_x(15)
+                self.set_font('helvetica', 'B', 9)
+                self.set_text_color(*TEXT_MAIN)
+                self.cell(50, 6, dim, 0, 0)
+
+                bar_x = 65
+                bar_w = 110
+                row_y = self.get_y()
+                by = row_y + 1
+                self.set_fill_color(226, 232, 240)
+                self.rect(bar_x, by, bar_w, 4, 'F')
+                fill_w = max(0, min((score_val / 10) * bar_w, bar_w))
+                self.set_fill_color(*get_bar_color(score_val))
+                self.rect(bar_x, by, fill_w, 4, 'F')
+
+                self.set_xy(180, row_y)
+                self.set_font('helvetica', 'B', 9)
+                self.set_text_color(*get_bar_color(score_val))
+                self.cell(18, 6, f"{score_val:.0f}/10", 0, 1)
+            divider()
+
+        # ─────────────────────────────────────────────────────────────
+        # 5. SKILL VISUALIZATION
+        # ─────────────────────────────────────────────────────────────
+        scorecard = data.get('scorecard', [])
+        if heat_map:
+            block_title("Skill Visualization", INDIGO)
+            self.set_x(15)
+            self.set_font('helvetica', 'I', 9)
+            self.set_text_color(*TEXT_LIGHT)
+            self.multi_cell(180, 5, "Please refer to the interactive web dashboard to view the dynamic radar visualization. A detailed breakdown of skills is provided in the Performance Scorecard below.")
+            divider()
+
+        # ─────────────────────────────────────────────────────────────
+        # 6. GOAL ATTAINMENT
         # ─────────────────────────────────────────────────────────────
         ga = data.get('goal_attainment', {})
         if ga:
@@ -2224,7 +2275,6 @@ class DashboardPDF(FPDF):
 
             focuses = ga.get('observation_focus', [])
             if focuses:
-                # Check if all focus items fit; if not, force page break
                 focus_height = 8 + len(focuses) * 8
                 self.check_space(focus_height)
                 self.ln(2)
@@ -2239,193 +2289,155 @@ class DashboardPDF(FPDF):
             divider()
 
         # ─────────────────────────────────────────────────────────────
-        # 4. SCENARIO CONTEXT
+        # 7. PERFORMANCE SCORECARD
         # ─────────────────────────────────────────────────────────────
-        if data.get('meta', {}).get('scenario'):
-            self.draw_context_summary()
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 5. QUESTIONING ANALYSIS
-        # ─────────────────────────────────────────────────────────────
-        if data.get('question_analysis'):
-            self.draw_question_analysis(data.get('question_analysis'))
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 6. DETAILED ANALYSIS
-        # ─────────────────────────────────────────────────────────────
-        if data.get('detailed_analysis'):
-            self.draw_detailed_analysis(data.get('detailed_analysis'))
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 7. COMPETENCY HEAT MAP
-        # ─────────────────────────────────────────────────────────────
-        heat_map = data.get('heat_map', [])
-        if heat_map:
-            block_title("Competency Heat Map", PURPLE)
-            for item in heat_map:
-                self.check_space(10)
-                dim = sanitize_text(str(item.get('dimension', '')))
-                score_val = self._extract_score_value(str(item.get('score', 0)))
-
-                self.set_x(15)
-                self.set_font('helvetica', 'B', 9)
-                self.set_text_color(*TEXT_MAIN)
-                self.cell(50, 6, dim, 0, 0)
-
-                # Bar starts right after the 50px label (15+50=65), 110px wide, score at 180
-                bar_x = 65
-                bar_w = 110
-                row_y = self.get_y()
-                by = row_y + 1
-                self.set_fill_color(226, 232, 240)
-                self.rect(bar_x, by, bar_w, 4, 'F')
-                fill_w = max(0, min((score_val / 10) * bar_w, bar_w))
-                self.set_fill_color(*get_bar_color(score_val))
-                self.rect(bar_x, by, fill_w, 4, 'F')
-
-                self.set_xy(180, row_y)
-                self.set_font('helvetica', 'B', 9)
-                self.set_text_color(*get_bar_color(score_val))
-                self.cell(18, 6, f"{score_val:.0f}/10", 0, 1)
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 8. SCORECARD
-        # ─────────────────────────────────────────────────────────────
-        scorecard = data.get('scorecard', [])
         if scorecard:
             self.draw_scorecard(scorecard)
             divider()
 
         # ─────────────────────────────────────────────────────────────
-        # 9. DEEP DIVE ANALYSIS
+        # 8. DEEP DIVE ANALYSIS
         # ─────────────────────────────────────────────────────────────
         dda = data.get('deep_dive_analysis', [])
-        if dda:
+        ba = data.get('behaviour_analysis', [])
+        eq = data.get('eq_analysis', [])
+        
+        if dda or ba or eq:
             block_title("Deep Dive Analysis", INDIGO)
-            for item in dda:
-                self.check_space(35)
-                topic = sanitize_text(str(item.get('topic', '')))
-                self.set_fill_color(238, 242, 255)
-                self.rect(10, self.get_y(), 190, 8, 'F')
-                self.set_xy(14, self.get_y() + 1)
+            
+            # i) Communication Style
+            if dda:
+                self.check_space(15)
+                self.ln(3)
+                self.set_x(15)
                 self.set_font('helvetica', 'B', 10)
                 self.set_text_color(*INDIGO)
-                self.cell(0, 6, topic, 0, 1)
-                self.ln(1)
+                self.cell(0, 6, "i) Communication Style", 0, 1)
+                
+                for item in dda:
+                    self.check_space(35)
+                    topic = sanitize_text(str(item.get('topic', '')))
+                    self.set_fill_color(238, 242, 255)
+                    self.rect(10, self.get_y(), 190, 8, 'F')
+                    self.set_xy(14, self.get_y() + 1)
+                    self.set_font('helvetica', 'B', 9)
+                    self.set_text_color(*INDIGO)
+                    self.cell(0, 6, topic, 0, 1)
+                    self.ln(1)
 
-                for key, label in [('tone','Tone'),('language_impact','Language Impact'),('comfort_level','Comfort Level'),
-                                    ('impact','Impact'),('questions_asked','Questions'),('exploration','Exploration'),
-                                    ('understanding_depth','Understanding Depth'),('analysis','Analysis')]:
-                    val = item.get(key, '')
-                    if val:
+                    for key, label in [('tone','Tone'),('language_impact','Language Impact'),('comfort_level','Comfort Level'),
+                                        ('impact','Impact'),('questions_asked','Questions'),('exploration','Exploration'),
+                                        ('understanding_depth','Understanding Depth'),('analysis','Analysis')]:
+                        val = item.get(key, '')
+                        if val:
+                            self.set_font('helvetica', 'B', 8)
+                            self.set_text_color(*TEXT_LIGHT)
+                            self.set_xy(15, self.get_y())
+                            super(DashboardPDF, self).cell(42, 5, f"{label}:", 0, 0)
+                            self.set_font('helvetica', '', 8)
+                            self.set_text_color(*TEXT_MAIN)
+                            cur_y = self.draw_wrapped_text(57, self.get_y(), 140, 5, sanitize_text(str(val)))
+                            self.set_y(cur_y)
+                    self.ln(2)
+
+            # ii) Behaviour Analysis
+            if ba:
+                self.check_space(15)
+                self.ln(4)
+                self.set_x(15)
+                self.set_font('helvetica', 'B', 10)
+                self.set_text_color(*PURPLE)
+                self.cell(0, 6, "ii) Behaviour Analysis", 0, 1)
+                
+                for item in ba:
+                    self.check_space(35)
+                    behavior = sanitize_text(str(item.get('behavior', '')))
+                    quote = sanitize_text(str(item.get('quote', '')))
+                    insight = sanitize_text(str(item.get('insight', '')))
+                    impact = sanitize_text(str(item.get('impact', '')))
+                    improved = sanitize_text(str(item.get('improved_approach', '')))
+                    impact_color = EMERALD if 'positive' in impact.lower() else ROSE
+
+                    self.set_fill_color(*LIGHT_BG)
+                    self.rect(10, self.get_y(), 190, 7, 'F')
+                    self.set_xy(15, self.get_y() + 1)
+                    self.set_font('helvetica', 'B', 9)
+                    self.set_text_color(*SLATE)
+                    self.cell(150, 5, behavior, 0, 0)
+                    self.set_font('helvetica', 'B', 8)
+                    self.set_text_color(*impact_color)
+                    self.cell(0, 5, impact.upper(), 0, 1)
+                    self.ln(1)
+
+                    if quote:
+                        self.set_x(18)
+                        self.set_font('helvetica', 'I', 9)
+                        self.set_text_color(*INDIGO)
+                        self.multi_cell(180, 5, f'"{quote}"')
+                    if insight:
+                        self.set_x(18)
+                        self.set_font('helvetica', '', 9)
+                        self.set_text_color(*TEXT_LIGHT)
+                        self.multi_cell(180, 5, insight)
+                    if improved:
+                        self.set_x(18)
+                        self.set_font('helvetica', '', 9)
+                        self.set_text_color(*EMERALD)
+                        self.multi_cell(180, 5, "Better: " + improved)
+                    self.ln(4)
+            
+            # iii) Emotional Intelligence
+            if eq:
+                self.check_space(15)
+                self.ln(4)
+                self.set_x(15)
+                self.set_font('helvetica', 'B', 10)
+                self.set_text_color(236, 72, 153) # Pink
+                self.cell(0, 6, "iii) Emotional Intelligence", 0, 1)
+                
+                # Let's just inline EQ rendering here so it is indented properly
+                for item in eq:
+                    self.check_space(20)
+                    nuance = sanitize_text(str(item.get('nuance', '')))
+                    proof = sanitize_text(str(item.get('proof', item.get('observation', ''))))
+                    suggestion = sanitize_text(str(item.get('suggestion', '')))
+                    
+                    self.set_fill_color(253, 242, 248) # Pink-50
+                    self.rect(10, self.get_y(), 190, 7, 'F')
+                    self.set_xy(15, self.get_y() + 1)
+                    self.set_font('helvetica', 'B', 9)
+                    self.set_text_color(219, 39, 119) # Pink-600
+                    self.cell(0, 5, nuance, 0, 1)
+                    self.ln(1)
+                    
+                    if proof:
+                        self.set_x(18)
                         self.set_font('helvetica', 'B', 8)
                         self.set_text_color(*TEXT_LIGHT)
-                        self.set_xy(15, self.get_y())
-                        super(DashboardPDF, self).cell(42, 5, f"{label}:", 0, 0)
+                        self.cell(15, 5, "Proof: ", 0, 0)
+                        self.set_font('helvetica', 'I', 8)
+                        self.set_text_color(*TEXT_MAIN)
+                        self.multi_cell(165, 5, f'"{proof}"')
+                    
+                    if suggestion:
+                        self.set_x(18)
+                        self.set_font('helvetica', 'B', 8)
+                        self.set_text_color(*TEXT_LIGHT)
+                        self.cell(20, 5, "Suggestion: ", 0, 0)
                         self.set_font('helvetica', '', 8)
                         self.set_text_color(*TEXT_MAIN)
-                        cur_y = self.draw_wrapped_text(57, self.get_y(), 140, 5, sanitize_text(str(val)))
-                        self.set_y(cur_y)
-                self.ln(2)
+                        self.multi_cell(160, 5, suggestion)
+                    self.ln(3)
+
             divider()
 
         # ─────────────────────────────────────────────────────────────
-        # 10. BEHAVIOURAL PATTERN SUMMARY
-        # ─────────────────────────────────────────────────────────────
-        ps = data.get('pattern_summary', '')
-        if ps:
-            block_title("Behavioural Pattern Summary", BLUE)
-            self.set_x(15)
-            self.set_font('helvetica', 'I', 11)
-            self.set_text_color(*SLATE)
-            self.multi_cell(180, 6, f'"{sanitize_text(str(ps))}"')
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 11. EQ ANALYSIS
-        # ─────────────────────────────────────────────────────────────
-        eq = data.get('eq_analysis', [])
-        if eq:
-            self.draw_eq_analysis(eq)
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 12. TURNING POINTS
-        # ─────────────────────────────────────────────────────────────
-        tp_list = data.get('turning_points', [])
-        if tp_list:
-            block_title("Turning Points Detected", AMBER)
-            for tp in tp_list:
-                self.check_space(16)
-                ts = sanitize_text(str(tp.get('timestamp', '')))
-                point = sanitize_text(str(tp.get('point', '')))
-
-                self.set_x(12)
-                self.set_font('helvetica', 'B', 8)
-                self.set_text_color(*AMBER)
-                self.cell(0, 5, ts.upper(), 0, 1)
-                self.set_x(15)
-                self.set_font('helvetica', '', 9)
-                self.set_text_color(*TEXT_MAIN)
-                self.multi_cell(180, 5, point)
-                self.ln(3)
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 13. BEHAVIOUR ANALYSIS
-        # ─────────────────────────────────────────────────────────────
-        ba = data.get('behaviour_analysis', [])
-        if ba:
-            block_title("Behaviour Analysis", SLATE)
-            for item in ba:
-                self.check_space(35)
-                behavior = sanitize_text(str(item.get('behavior', '')))
-                quote = sanitize_text(str(item.get('quote', '')))
-                insight = sanitize_text(str(item.get('insight', '')))
-                impact = sanitize_text(str(item.get('impact', '')))
-                improved = sanitize_text(str(item.get('improved_approach', '')))
-                impact_color = EMERALD if 'positive' in impact.lower() else ROSE
-
-                self.set_fill_color(*LIGHT_BG)
-                self.rect(10, self.get_y(), 190, 7, 'F')
-                self.set_xy(12, self.get_y() + 1)
-                self.set_font('helvetica', 'B', 10)
-                self.set_text_color(*SLATE)
-                self.cell(150, 5, behavior, 0, 0)
-                self.set_font('helvetica', 'B', 8)
-                self.set_text_color(*impact_color)
-                self.cell(0, 5, impact.upper(), 0, 1)
-                self.ln(1)
-
-                if quote:
-                    self.set_x(15)
-                    self.set_font('helvetica', 'I', 9)
-                    self.set_text_color(*INDIGO)
-                    self.multi_cell(180, 5, f'"{quote}"')
-                if insight:
-                    self.set_x(15)
-                    self.set_font('helvetica', '', 9)
-                    self.set_text_color(*TEXT_LIGHT)
-                    self.multi_cell(180, 5, insight)
-                if improved:
-                    self.set_x(15)
-                    self.set_font('helvetica', '', 9)
-                    self.set_text_color(*EMERALD)
-                    self.multi_cell(180, 5, "Better: " + improved)
-                self.ln(4)
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 14. STRENGTHS & MISSED OPPORTUNITIES (dual column)
+        # 9. STRENGTHS & MISSED OPPORTUNITIES
         # ─────────────────────────────────────────────────────────────
         si = data.get('strengths_and_improvements', {})
         strengths_list = si.get('strengths', []) if si else data.get('strengths', [])
         missed_list = si.get('missed_opportunities', []) if si else data.get('missed_opportunities', [])
-        ideal_qs = data.get('ideal_questions', [])
+        ideal_qs = data.get('ideal_questions') or data.get('deal_coaching_questions', [])
 
         if strengths_list or missed_list:
             block_title("Strengths & Missed Opportunities", EMERALD)
@@ -2435,7 +2447,6 @@ class DashboardPDF(FPDF):
                 self.check_space(8 + len(strengths_list) * 8)
                 self.set_fill_color(235, 255, 245)
                 hdr_y = self.get_y()
-                # Draw header background
                 self.set_fill_color(*EMERALD)
                 self.rect(10, hdr_y, 190, 7, 'F')
                 self.set_xy(14, hdr_y + 1)
@@ -2476,25 +2487,62 @@ class DashboardPDF(FPDF):
             divider()
 
         # ─────────────────────────────────────────────────────────────
-        # 15. IDEAL COACHING QUESTIONS
+        # 10. IDEAL COACHING QUESTIONS
         # ─────────────────────────────────────────────────────────────
         if ideal_qs:
             block_title("Ideal Coaching Questions", INDIGO)
-            for q in ideal_qs:
-                self.check_space(10)
-                self.set_x(15)
-                self.set_font('helvetica', 'I', 9)
-                self.set_text_color(*INDIGO)
-                self.multi_cell(180, 6, f'"{sanitize_text(str(q))}"')
-                self.ln(1)
+            for item in ideal_qs:
+                if isinstance(item, dict):
+                    q = item.get("question", "")
+                    defn = item.get("definition", "")
+                    score = item.get("scoring", "")
+                    impact = item.get("impact", "")
+                    
+                    self.check_space(25)
+                    self.set_x(15)
+                    self.set_font('helvetica', 'B', 10)
+                    self.set_text_color(*INDIGO)
+                    self.multi_cell(180, 5, f'"{sanitize_text(q)}"')
+                    
+                    self.set_x(18)
+                    self.set_font('helvetica', 'B', 8)
+                    self.set_text_color(*TEXT_LIGHT)
+                    self.cell(20, 4, "Definition: ", 0, 0)
+                    self.set_font('helvetica', '', 8)
+                    self.set_text_color(*TEXT_MAIN)
+                    self.multi_cell(157, 4, sanitize_text(defn))
+                    
+                    self.set_x(18)
+                    self.set_font('helvetica', 'B', 8)
+                    self.set_text_color(*TEXT_LIGHT)
+                    self.cell(20, 4, "Impact: ", 0, 0)
+                    self.set_font('helvetica', '', 8)
+                    self.set_text_color(*TEXT_MAIN)
+                    self.multi_cell(157, 4, sanitize_text(impact))
+                    
+                    self.set_x(18)
+                    self.set_font('helvetica', 'B', 8)
+                    self.set_text_color(*TEXT_LIGHT)
+                    self.cell(20, 4, "Score: ", 0, 0)
+                    self.set_font('helvetica', 'B', 8)
+                    self.set_text_color(*INDIGO)
+                    self.multi_cell(157, 4, sanitize_text(score))
+                    self.ln(3)
+                else:
+                    self.check_space(10)
+                    self.set_x(15)
+                    self.set_font('helvetica', 'I', 9)
+                    self.set_text_color(*INDIGO)
+                    self.multi_cell(180, 6, f'"{sanitize_text(str(item))}"')
+                    self.ln(1)
             divider()
 
         # ─────────────────────────────────────────────────────────────
-        # 16. ACTION PLAN
+        # 11. ACTION PLAN
         # ─────────────────────────────────────────────────────────────
         ap = data.get('action_plan', {})
         if ap:
-            block_title("Action Plan", PURPLE)
+            block_title("Action Plan Improve", PURPLE)
             timeline = sanitize_text(str(ap.get('timeline', '')))
 
             # Single info box for timeline
@@ -2536,96 +2584,6 @@ class DashboardPDF(FPDF):
                 self.multi_cell(180, 5, "+ " + sanitize_text(str(ind)))
             divider()
 
-        # ─────────────────────────────────────────────────────────────
-        # 17. FOLLOW-UP STRATEGY
-        # ─────────────────────────────────────────────────────────────
-        fus = data.get('follow_up_strategy', {})
-        if fus:
-            block_title("Follow-Up Strategy", BLUE)
-            cadence = sanitize_text(str(fus.get('review_cadence', '')))
-            if cadence:
-                self.set_fill_color(239, 246, 255)
-                self.rect(10, self.get_y(), 190, 12, 'F')
-                self.set_xy(14, self.get_y() + 2)
-                self.set_font('helvetica', 'B', 8)
-                self.set_text_color(*BLUE)
-                self.cell(0, 4, "REVIEW CADENCE", 0, 1)
-                self.set_xy(14, self.get_y())
-                self.set_font('helvetica', 'B', 10)
-                self.set_text_color(*TEXT_MAIN)
-                self.cell(0, 5, cadence, 0, 1)
-                self.ln(2)
-
-            for met in fus.get('metrics_to_track', []):
-                self.set_x(15)
-                self.set_font('helvetica', '', 9)
-                self.set_text_color(*TEXT_MAIN)
-                self.multi_cell(180, 5, "* " + sanitize_text(str(met)))
-            self.ln(1)
-
-            method = sanitize_text(str(fus.get('accountability_method', '')))
-            if method:
-                small_label("Accountability Method")
-                body_text(method)
-            divider()
-
-        # ─────────────────────────────────────────────────────────────
-        # 18. FINAL EVALUATION
-        # ─────────────────────────────────────────────────────────────
-        fe = data.get('final_evaluation', {})
-        if fe:
-            self.check_space(60)
-            self.add_page()
-            block_title("Final Evaluation & Recommendation", INDIGO)
-
-            readiness = sanitize_text(str(fe.get('readiness_level', '')))
-            maturity = sanitize_text(str(fe.get('maturity_rating', '')))
-
-            # Two-column badges - single start_y for both
-            badge_y = self.get_y()
-            self.set_fill_color(238, 242, 255)
-            self.rect(10, badge_y, 92, 22, 'F')
-            self.set_fill_color(245, 243, 255)
-            self.rect(108, badge_y, 92, 22, 'F')
-
-            self.set_xy(14, badge_y + 2)
-            self.set_font('helvetica', 'B', 8)
-            self.set_text_color(*INDIGO)
-            self.cell(80, 5, "MATURITY RATING", 0, 1)
-            self.set_xy(14, self.get_y())
-            self.set_font('helvetica', 'B', 14)
-            sv = self._extract_score_value(maturity)
-            self.set_text_color(*get_bar_color(sv))
-            self.cell(80, 8, maturity, 0, 0)
-
-            self.set_xy(112, badge_y + 2)
-            self.set_font('helvetica', 'B', 8)
-            self.set_text_color(*PURPLE)
-            self.cell(80, 5, "READINESS LEVEL", 0, 1)
-            self.set_xy(112, self.get_y())
-            self.set_font('helvetica', 'B', 12)
-            self.set_text_color(*PURPLE)
-            self.cell(80, 8, readiness, 0, 0)
-
-            # Move cursor past both boxes
-            actual_tmp = self.get_y()
-            if actual_tmp < badge_y: self.set_y(actual_tmp + 5)
-            else: self.set_y(badge_y + 26)
-
-            for foc in fe.get('immediate_focus', []):
-                self.set_x(15)
-                self.set_font('helvetica', '', 9)
-                self.set_text_color(*TEXT_MAIN)
-                self.multi_cell(180, 5, "* " + sanitize_text(str(foc)))
-            self.ln(3)
-
-            lt = sanitize_text(str(fe.get('long_term_suggestion', '')))
-            if lt:
-                small_label("Long-Term Development Suggestion", BLUE)
-                self.set_x(15)
-                self.set_font('helvetica', 'I', 10)
-                self.set_text_color(*SLATE)
-                self.multi_cell(180, 6, f'"{lt}"')
 
 
 def generate_report(transcript, role, ai_role, scenario, framework=None, filename="coaching_report.pdf", mode="coaching", precomputed_data=None, scenario_type=None, user_name="{user_name}", ai_character="alex", session_mode=None):
@@ -2680,7 +2638,7 @@ def generate_report(transcript, role, ai_role, scenario, framework=None, filenam
     
     # 1. Banner (shown for non-mentorship)
     meta = data.get('meta', {}) if isinstance(data, dict) else {}
-    if session_mode != "mentorship" and (data.get('type') if isinstance(data, dict) else None) != "mentorship_reflection":
+    if (data.get('type') if isinstance(data, dict) else None) != "mentorship_reflection":
         pdf.draw_banner(meta, scenario_type=scenario_type)
     
     # 2. Route to correct renderer based on session mode
@@ -2688,7 +2646,7 @@ def generate_report(transcript, role, ai_role, scenario, framework=None, filenam
     
     try:
         # Check if this is a MENTORSHIP REFLECTION report (new format)
-        if session_mode == "mentorship" or (data.get('type') if isinstance(data, dict) else None) == "mentorship_reflection":
+        if (data.get('type') if isinstance(data, dict) else None) == "mentorship_reflection":
             print(f"[INFO] Rendering Mentorship Reflection Report (observation-based learning)...")
             pdf.draw_mentorship_reflection_report(data)
         else:

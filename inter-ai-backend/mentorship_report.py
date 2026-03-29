@@ -331,10 +331,15 @@ def draw_mentorship_cover(pdf):
     # Scenario (right side)
     scenario_txt = getattr(pdf, "scenario_text", "")
     if scenario_txt:
+        text = str(scenario_txt).replace("CONTEXT:", "").replace("Situation:", "").strip()
+        for marker in ["AI BEHAVIOR:", "AI ROLE:", "USER ROLE:", "SCENARIO:"]:
+            if marker in text:
+                text = text.split(marker)[0].strip()
+        
         pdf.set_xy(80, 20)
         pdf.set_font("helvetica", "", 9)
         pdf.set_text_color(200, 220, 255)
-        label = scenario_txt if len(scenario_txt) <= 60 else scenario_txt[:57] + "..."
+        label = text if len(text) <= 60 else text[:57] + "..."
         FPDF_cell(pdf, 120, 5, f"Scenario: {label}", 0, 0, "R")
 
     # Participant name
