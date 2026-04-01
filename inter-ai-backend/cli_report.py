@@ -606,7 +606,7 @@ def analyze_full_report_data(transcript, role, ai_role, scenario, framework=None
       "quote": "Verbatim line from transcript",
       "insight": "Impact of this behavior",
       "impact": "Positive/Negative",
-      "improved_approach": "Suggested alternative phrasing"
+      "improved_approach": "Suggested alternative phrasing (Do not provide entirely new questions here, only rephrasing of what they said)"
     }}
   ],
   "turning_points": [
@@ -625,17 +625,17 @@ def analyze_full_report_data(transcript, role, ai_role, scenario, framework=None
       "reasoning": "Simple explanation.",
       "quote": "Direct quote proof.",
       "suggestion": "How to improve this specifically.",
-      "alternative_questions": [{{"question": "Better question", "rationale": "Why it works"}}]
+      "alternative_questions": [{{"question": "Better phrasing of their approach (Not a new strategic question)", "rationale": "Why it works"}}]
     }}
   ],
   "ideal_questions": [
     {{
-      "question": "High-impact question 1",
+      "question": "High-impact new strategic question 1",
       "definition": "Why this question is powerful",
       "scoring": "10/10",
       "impact": "The expected outcome or awareness shift it creates"
     }}
-  ],
+  ], // MUST provide EXACTLY 3 to 5 questions. These must be entirely NEW questions the user missed, NOT repeats from earlier sections.
   "action_plan": {{
     "specific_actions": ["Action 1 (Do not write 'Owner' or 'User: ' - just write the action)"], "timeline": "Next 30 days", "success_indicators": ["Indicator 1"]
   }},
@@ -1041,7 +1041,7 @@ class DashboardPDF(FPDF):
         self.check_space(50)
         self.ln(5)
         
-        self.draw_section_header("SCORING METHODOLOGY (THE 'WHY')", COLORS['secondary'])
+        self.draw_section_header("SCORING METHODOLOGY (COACHING EFFICACY)", COLORS['secondary'])
         
         # Grid Background
         self.set_fill_color(248, 250, 252)
@@ -1081,6 +1081,45 @@ class DashboardPDF(FPDF):
         actual_tmp = self.get_y()
         if actual_tmp < start_y: self.set_y(actual_tmp + 2)
         else: self.set_y(max(actual_tmp + 2, start_y + 42))
+
+    def draw_style_rubric(self):
+        """Draw the Coaching Style rubric section."""
+        self.check_space(60)
+        self.ln(5)
+        
+        self.draw_section_header("PRIMARY COACHING STYLES (RUBRIC)", COLORS['accent'])
+        
+        # Grid Background
+        self.set_fill_color(248, 250, 252)
+        start_y = self.get_y()
+        self.rect(10, start_y, 190, 45, 'F')
+        
+        styles = [
+            ("Directive", "The coach tells the user exactly what to do. High control, low empowerment. Suitable for emergencies, but limits long-term growth.", COLORS['danger']),
+            ("Supportive", "The coach provides high emotional validation but lacks structure or accountability. Good for building trust, but may stall progress.", COLORS['warning']),
+            ("Avoidant", "The coach avoids difficult conversations, defaults to vague hope, or minimizes the gap. Fails to address core issues effectively.", COLORS['grey_text']),
+            ("Balanced", "The coach validates emotion while driving accountability. Uses open questions and co-creates plans. The ideal coaching state.", COLORS['success'])
+        ]
+        
+        current_y = start_y + 4
+        
+        for style, desc, color in styles:
+            self.set_xy(15, current_y)
+            self.set_font('helvetica', 'B', 8)
+            self.set_text_color(*color)
+            self.cell(20, 6, style, 0, 0)
+            
+            self.set_font('helvetica', '', 8)
+            self.set_text_color(*COLORS['text_light'])
+            self.cell(3, 6, "|", 0, 0)
+            
+            self.set_text_color(*COLORS['text_main'])
+            self.multi_cell(155, 6, desc)
+            current_y += 10
+
+        actual_tmp = self.get_y()
+        if actual_tmp < start_y: self.set_y(actual_tmp + 2)
+        else: self.set_y(max(actual_tmp + 2, start_y + 47))
 
     def draw_detailed_analysis(self, analysis_data):
         """Draw the detailed analysis section (Supporting string or list of topics)."""
@@ -2193,6 +2232,10 @@ class DashboardPDF(FPDF):
             self.set_font('helvetica', 'I', 9)
             self.set_text_color(*TEXT_LIGHT)
             self.multi_cell(180, 5, '"' + sanitize_text(str(cs.get('description', ''))) + '"')
+            
+            self.draw_scoring_methodology()
+            self.draw_style_rubric()
+            
             divider()
 
         # ─────────────────────────────────────────────────────────────
